@@ -42,3 +42,4 @@ export const COUNTRY_CODES: CountryCode[] = [
   { name: "Poland", code: "+48", flag: "🇵🇱" },
   { name: "Egypt", code: "+20", flag: "🇪🇬" },
 ];
+

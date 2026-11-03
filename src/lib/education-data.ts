@@ -155,3 +155,4 @@ export const POPULAR_UNIVERSITIES: string[] = [
   "University of Tokyo, Japan",
   "Tsinghua University, China",
 ];
+
