@@ -144,3 +144,4 @@ Return a JSON object conforming EXACTLY to this JSON structure:
   const parsed = JSON.parse(text) as JobAnalysisResult;
   return parsed;
 }
+
