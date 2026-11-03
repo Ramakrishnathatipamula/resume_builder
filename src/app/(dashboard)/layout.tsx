@@ -4,17 +4,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut, useSession } from "@/lib/auth-client";
 import {
-  LayoutDashboard,
   User,
-  Briefcase,
-  GitCompare,
-  FileText,
-  Compass,
-  ListTodo,
+  LayoutTemplate,
+  History,
   Video,
   LogOut,
   Sparkles,
   Loader2,
+  FileText,
 } from "lucide-react";
 
 export default function DashboardLayout({
@@ -32,14 +29,10 @@ export default function DashboardLayout({
   };
 
   const navItems = [
-    { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
     { name: "Career Profile", href: "/dashboard/profile", icon: User },
-    { name: "Job Intelligence", href: "/dashboard/jobs", icon: Briefcase },
-    { name: "Skill Match Engine", href: "/dashboard/match", icon: GitCompare },
-    { name: "Resume Builder", href: "/dashboard/builder", icon: FileText },
-    { name: "Learning Roadmap", href: "/dashboard/roadmap", icon: Compass },
-    { name: "Application Tracker", href: "/dashboard/tracker", icon: ListTodo },
-    { name: "Interview Prep", href: "/dashboard/interview", icon: Video },
+    { name: "Resume Templates", href: "/dashboard/templates", icon: LayoutTemplate },
+    { name: "History of Generated Resumes", href: "/dashboard/history", icon: History },
+    { name: "Interview Preparation", href: "/dashboard/interview", icon: Video },
   ];
 
   if (isPending) {
@@ -61,19 +54,37 @@ export default function DashboardLayout({
   return (
     <div className="min-h-screen flex bg-[#0b0f19]">
       {/* Sidebar Navigation */}
-      <aside className="w-64 border-r border-gray-800/80 bg-gray-950/70 p-5 flex flex-col justify-between hidden md:flex">
+      <aside className="w-72 border-r border-gray-800/80 bg-gray-950/80 p-5 flex flex-col justify-between hidden md:flex shrink-0">
         <div>
-          <div className="flex items-center gap-2.5 px-2 mb-8">
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-white text-lg shadow-md shadow-indigo-600/30">
+          {/* Logo / Brand clickable to Home / Job Analyzer */}
+          <Link href="/dashboard" className="flex items-center gap-2.5 px-2 mb-8 group">
+            <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center font-bold text-white text-lg shadow-lg shadow-indigo-600/30 group-hover:bg-indigo-500 transition">
               C
             </div>
             <div>
-              <span className="font-bold text-white tracking-tight block text-sm">CareerForge</span>
-              <span className="text-[10px] text-indigo-400 font-medium block">AI Intelligence</span>
+              <span className="font-bold text-white tracking-tight block text-base group-hover:text-indigo-300 transition">CareerForge</span>
+              <span className="text-[11px] text-gray-400 font-medium block">Resume Intelligence</span>
             </div>
-          </div>
+          </Link>
 
-          <nav className="space-y-1">
+          {/* User Requested Left Sidebar Menu Items */}
+          <div className="space-y-1">
+            <Link
+              href="/dashboard"
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition mb-2 ${
+                pathname === "/dashboard"
+                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-semibold"
+                  : "text-gray-300 hover:text-white hover:bg-gray-900/60"
+              }`}
+            >
+              <FileText className="w-4 h-4" />
+              <span>Generate Resume</span>
+            </Link>
+
+            <div className="pt-2 pb-1.5 px-3 text-[11px] font-semibold tracking-wider uppercase text-gray-500">
+              Navigation
+            </div>
+
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.href;
@@ -81,7 +92,7 @@ export default function DashboardLayout({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition ${
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition ${
                     isActive
                       ? "bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 font-semibold"
                       : "text-gray-400 hover:text-white hover:bg-gray-900/60"
@@ -92,12 +103,12 @@ export default function DashboardLayout({
                 </Link>
               );
             })}
-          </nav>
+          </div>
         </div>
 
         {/* User Card & Logout */}
         <div className="pt-4 border-t border-gray-800/80">
-          <div className="px-3 py-2.5 rounded-lg bg-gray-900/60 border border-gray-800/60 mb-2">
+          <div className="px-3.5 py-3 rounded-xl bg-gray-900/70 border border-gray-800/70 mb-2">
             <p className="text-xs font-semibold text-white truncate">{session.user.name}</p>
             <p className="text-[11px] text-gray-400 truncate">{session.user.email}</p>
           </div>
@@ -122,7 +133,7 @@ export default function DashboardLayout({
           </div>
 
           <div className="flex items-center gap-3 text-sm text-gray-300">
-            <span>Welcome, <strong className="text-white">{session.user.name}</strong></span>
+            <span>Signed in as <strong className="text-white">{session.user.name}</strong></span>
           </div>
         </header>
 

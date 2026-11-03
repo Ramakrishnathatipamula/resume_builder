@@ -340,3 +340,4 @@ model MockInterview {
 
   @@index([userId])
 }
+

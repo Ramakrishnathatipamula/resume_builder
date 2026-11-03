@@ -1,0 +1,19 @@
+const apiKey = process.env.GEMINI_API_KEY || "";
+
+async function listModels() {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    console.log("Status:", res.status);
+    if (data.models) {
+      console.log("Available models:", data.models.map(m => m.name));
+    } else {
+      console.log("Response:", JSON.stringify(data, null, 2));
+    }
+  } catch (err) {
+    console.error("Fetch error:", err);
+  }
+}
+
+listModels();
