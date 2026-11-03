@@ -142,3 +142,4 @@ careerforge/
   });
   ```
 - Unauthorized access attempts immediately return typed authorization rejections.
+

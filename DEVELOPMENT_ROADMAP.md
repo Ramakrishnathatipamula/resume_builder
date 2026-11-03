@@ -105,3 +105,4 @@ flowchart TD
 ### Phase 13: Deployment & Production Launch
 - **Goal:** Public online deployment with Neon DB connection pooling, HTTPS, and health monitoring.
 - **Success Criteria:** Live production URL accessible to users with verified registration and persistence.
+

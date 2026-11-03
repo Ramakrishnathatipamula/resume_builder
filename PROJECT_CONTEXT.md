@@ -37,3 +37,4 @@ Traditional resume builders suffer from two major flaws:
 1. **ATS Compatibility:** Templates designed with standard semantic typography, single/two-column tabular-free layouts, and parsable font hierarchies.
 2. **Export Fidelity:** Pixel-accurate PDF rendering and 100% syntactically valid LaTeX output compatible with Overleaf and TeXLive.
 3. **Deterministic Scoring:** Skill compatibility scores must be transparently explainable with direct evidence links to candidate records.
+

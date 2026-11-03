@@ -120,3 +120,4 @@ To guarantee total factual integrity:
    > *"You are an ATS optimization assistant. You are strictly forbidden from inventing any work experience, degree, company name, skill, or metric not present in the provided Profile JSON. If a job requirement is missing from the profile, you must NOT add it."*
 2. **Post-Generation Diff Validator:** A deterministic TypeScript validator checks every generated skill and technology against the candidate's verified profile skill list. Any hallucinated keyword is automatically flagged or stripped before saving.
 3. **Structured Output Enforcement:** Models return responses formatted strictly to a Zod schema using Gemini `responseSchema` or OpenAI JSON Schema mode. If schema parsing fails, the orchestrator triggers an automatic single-retry with error feedback.
+

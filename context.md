@@ -107,3 +107,4 @@ flowchart TD
 2. **Multi-Tenant Data Isolation:** All database queries and server actions must verify session ownership (`WHERE userId = session.user.id`).
 3. **Decoupled Architecture:** Each phase builds upon verified foundations. Agent modules are self-contained with typed contracts.
 4. **Resilient Exporting:** Works natively without requiring an Overleaf account, while providing seamless Overleaf integration for LaTeX enthusiasts.
+

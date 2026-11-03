@@ -407,3 +407,4 @@ model MockInterview {
   @@index([userId])
 }
 ```
+
