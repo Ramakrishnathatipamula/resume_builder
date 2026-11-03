@@ -86,6 +86,9 @@ model Profile {
   summary         String?
   email           String?
   phone           String?
+  countryCode     String?         @default("+91")
+  dob             DateTime?
+  gender          String?
   location        String?
   websiteUrl      String?
   githubUrl       String?
@@ -107,6 +110,7 @@ model Education {
   id           String    @id @default(cuid())
   profileId    String
   profile      Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  level        String?   @default("UNDERGRADUATE") // UNDERGRADUATE, POSTGRADUATE, INTERMEDIATE, SECONDARY, DIPLOMA, PHD
   institution  String
   degree       String
   fieldOfStudy String
@@ -114,6 +118,7 @@ model Education {
   endDate      DateTime?
   isCurrent    Boolean   @default(false)
   gpa          String?
+  gpaScale     String?   @default("10") // 10, 100, 4
   honors       String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt

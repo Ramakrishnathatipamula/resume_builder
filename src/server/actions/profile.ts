@@ -77,6 +77,9 @@ export async function updatePersonalInfo(data: {
   summary: string;
   email?: string;
   phone?: string;
+  countryCode?: string;
+  dob?: string;
+  gender?: string;
   location?: string;
   websiteUrl?: string;
   githubUrl?: string;
@@ -113,6 +116,9 @@ export async function updatePersonalInfo(data: {
       summary: data.summary,
       email: data.email,
       phone: data.phone,
+      countryCode: data.countryCode || "+91",
+      dob: data.dob ? new Date(data.dob) : null,
+      gender: data.gender || null,
       location: data.location,
       websiteUrl: data.websiteUrl,
       githubUrl: data.githubUrl,
@@ -130,17 +136,23 @@ export async function updatePersonalInfo(data: {
 // EDUCATION ACTIONS
 // ----------------------------------------------------
 export async function addEducation(data: {
+  level?: string;
   institution: string;
   degree: string;
-  fieldOfStudy: string;
+  fieldOfStudy?: string;
   startDate: string;
   endDate?: string;
   isCurrent: boolean;
-  gpa?: string;
+  gpa: string;
+  gpaScale?: string;
 }) {
   const headerList = await headers();
   const session = await auth.api.getSession({ headers: headerList });
   if (!session?.user) throw new Error("Unauthorized");
+
+  if (!data.gpa || data.gpa.trim() === "") {
+    throw new Error("GPA / Percentage is mandatory.");
+  }
 
   const profile = await db.profile.findUnique({ where: { userId: session.user.id } });
   if (!profile) throw new Error("Profile not found");
@@ -148,13 +160,15 @@ export async function addEducation(data: {
   const edu = await db.education.create({
     data: {
       profileId: profile.id,
+      level: data.level || "UNDERGRADUATE",
       institution: data.institution,
       degree: data.degree,
-      fieldOfStudy: data.fieldOfStudy,
+      fieldOfStudy: data.fieldOfStudy || data.degree,
       startDate: new Date(data.startDate),
       endDate: data.endDate && !data.isCurrent ? new Date(data.endDate) : null,
       isCurrent: data.isCurrent,
-      gpa: data.gpa,
+      gpa: data.gpa.trim(),
+      gpaScale: data.gpaScale || "10",
     },
   });
 
