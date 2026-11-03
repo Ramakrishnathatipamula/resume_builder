@@ -176,6 +176,49 @@ export async function addEducation(data: {
   return { success: true, data: edu };
 }
 
+export async function updateEducation(
+  id: string,
+  data: {
+    level?: string;
+    institution: string;
+    degree: string;
+    fieldOfStudy?: string;
+    startDate: string;
+    endDate?: string;
+    isCurrent: boolean;
+    gpa: string;
+    gpaScale?: string;
+  }
+) {
+  const headerList = await headers();
+  const session = await auth.api.getSession({ headers: headerList });
+  if (!session?.user) throw new Error("Unauthorized");
+
+  const edu = await db.education.findUnique({
+    where: { id },
+    include: { profile: true },
+  });
+  if (!edu || edu.profile.userId !== session.user.id) throw new Error("Unauthorized or not found");
+
+  const updated = await db.education.update({
+    where: { id },
+    data: {
+      level: data.level || "UNDERGRADUATE",
+      institution: data.institution,
+      degree: data.degree,
+      fieldOfStudy: data.fieldOfStudy || data.degree,
+      startDate: new Date(data.startDate),
+      endDate: data.endDate && !data.isCurrent ? new Date(data.endDate) : null,
+      isCurrent: data.isCurrent,
+      gpa: data.gpa.trim(),
+      gpaScale: data.gpaScale || "10",
+    },
+  });
+
+  revalidatePath("/dashboard/profile");
+  return { success: true, data: updated };
+}
+
 export async function deleteEducation(id: string) {
   const headerList = await headers();
   const session = await auth.api.getSession({ headers: headerList });
@@ -201,6 +244,7 @@ export async function deleteEducation(id: string) {
 export async function addExperience(data: {
   company: string;
   title: string;
+  employmentType?: string;
   location?: string;
   startDate: string;
   endDate?: string;
@@ -220,6 +264,7 @@ export async function addExperience(data: {
       profileId: profile.id,
       company: data.company,
       title: data.title,
+      employmentType: data.employmentType || "Full-Time",
       location: data.location,
       startDate: new Date(data.startDate),
       endDate: data.endDate && !data.isCurrent ? new Date(data.endDate) : null,
@@ -231,6 +276,49 @@ export async function addExperience(data: {
 
   revalidatePath("/dashboard/profile");
   return { success: true, data: exp };
+}
+
+export async function updateExperience(
+  id: string,
+  data: {
+    company: string;
+    title: string;
+    employmentType?: string;
+    location?: string;
+    startDate: string;
+    endDate?: string;
+    isCurrent: boolean;
+    bullets: string[];
+    technologies: string[];
+  }
+) {
+  const headerList = await headers();
+  const session = await auth.api.getSession({ headers: headerList });
+  if (!session?.user) throw new Error("Unauthorized");
+
+  const exp = await db.experience.findUnique({
+    where: { id },
+    include: { profile: true },
+  });
+  if (!exp || exp.profile.userId !== session.user.id) throw new Error("Unauthorized or not found");
+
+  const updated = await db.experience.update({
+    where: { id },
+    data: {
+      company: data.company,
+      title: data.title,
+      employmentType: data.employmentType || "Full-Time",
+      location: data.location,
+      startDate: new Date(data.startDate),
+      endDate: data.endDate && !data.isCurrent ? new Date(data.endDate) : null,
+      isCurrent: data.isCurrent,
+      bullets: data.bullets,
+      technologies: data.technologies,
+    },
+  });
+
+  revalidatePath("/dashboard/profile");
+  return { success: true, data: updated };
 }
 
 export async function deleteExperience(id: string) {

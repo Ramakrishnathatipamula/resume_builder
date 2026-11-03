@@ -127,19 +127,20 @@ model Education {
 }
 
 model Experience {
-  id           String    @id @default(cuid())
-  profileId    String
-  profile      Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  company      String
-  title        String
-  location     String?
-  startDate    DateTime
-  endDate      DateTime?
-  isCurrent    Boolean   @default(false)
-  bullets      String[]  @default([])
-  technologies String[]  @default([])
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  profileId      String
+  profile        Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  company        String
+  title          String
+  employmentType String?   @default("Full-Time") // Full-Time, Internship, Contract, Part-Time, Freelance
+  location       String?
+  startDate      DateTime
+  endDate        DateTime?
+  isCurrent      Boolean   @default(false)
+  bullets        String[]  @default([])
+  technologies   String[]  @default([])
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@index([profileId])
 }

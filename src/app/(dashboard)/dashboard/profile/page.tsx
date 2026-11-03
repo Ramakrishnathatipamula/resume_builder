@@ -79,6 +79,7 @@ export default function CareerProfilePage() {
   const [showExpModal, setShowExpModal] = useState(false);
   const [expCompany, setExpCompany] = useState("");
   const [expTitle, setExpTitle] = useState("");
+  const [expEmploymentType, setExpEmploymentType] = useState("Full-Time");
   const [expLocation, setExpLocation] = useState("");
   const [expStart, setExpStart] = useState("");
   const [expEnd, setExpEnd] = useState("");
@@ -228,6 +229,7 @@ export default function CareerProfilePage() {
       await addExperience({
         company: expCompany,
         title: expTitle,
+        employmentType: expEmploymentType,
         location: expLocation || undefined,
         startDate: expStart,
         endDate: expEnd || undefined,
@@ -238,9 +240,11 @@ export default function CareerProfilePage() {
       setShowExpModal(false);
       setExpCompany("");
       setExpTitle("");
+      setExpEmploymentType("Full-Time");
       setExpLocation("");
       setExpStart("");
       setExpEnd("");
+      setExpCurrent(false);
       setExpBullets("");
       setExpTech("");
       await refreshProfile();
@@ -938,7 +942,22 @@ export default function CareerProfilePage() {
                 >
                   <div className="flex justify-between items-start">
                     <div>
-                      <h3 className="font-bold text-white text-base">{exp.title}</h3>
+                      <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                        <h3 className="font-bold text-white text-base">{exp.title}</h3>
+                        {exp.employmentType && (
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                            exp.employmentType === "Internship"
+                              ? "bg-amber-950/60 border-amber-700/50 text-amber-400"
+                              : exp.employmentType === "Part-Time"
+                              ? "bg-sky-950/60 border-sky-700/50 text-sky-400"
+                              : exp.employmentType === "Contract" || exp.employmentType === "Freelance"
+                              ? "bg-purple-950/60 border-purple-700/50 text-purple-400"
+                              : "bg-emerald-950/60 border-emerald-700/50 text-emerald-400"
+                          }`}>
+                            {exp.employmentType}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-indigo-400 font-medium">
                         {exp.company} {exp.location && `• ${exp.location}`}
                       </p>
@@ -1005,6 +1024,22 @@ export default function CareerProfilePage() {
                       onChange={(e) => setExpTitle(e.target.value)}
                       className="w-full px-3 py-2 rounded-lg bg-gray-950 border border-gray-800 text-white text-sm"
                     />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-300 mb-1">Employment Type</label>
+                    <select
+                      value={expEmploymentType}
+                      onChange={(e) => setExpEmploymentType(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-gray-950 border border-gray-800 text-white text-sm"
+                    >
+                      <option value="Full-Time">Full-Time</option>
+                      <option value="Internship">Internship</option>
+                      <option value="Part-Time">Part-Time</option>
+                      <option value="Contract">Contract</option>
+                      <option value="Freelance">Freelance</option>
+                      <option value="Apprenticeship">Apprenticeship</option>
+                      <option value="Trainee">Trainee</option>
+                    </select>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-300 mb-1">Location</label>
