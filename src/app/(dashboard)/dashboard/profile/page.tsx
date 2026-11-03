@@ -399,8 +399,8 @@ export default function CareerProfilePage() {
       {/* Tabs Navigation */}
       <div className="flex flex-wrap gap-2 border-b border-gray-800 pb-3">
         {[
-          { key: "personal", label: "Personal, DOB & Contact", icon: User },
-          { key: "education", label: `Education & Boards (${profile?.educations?.length || 0})`, icon: GraduationCap },
+          { key: "personal", label: "Personal", icon: User },
+          { key: "education", label: `Education (${profile?.educations?.length || 0})`, icon: GraduationCap },
           { key: "experience", label: `Experience (${profile?.experiences?.length || 0})`, icon: Briefcase },
           { key: "skills", label: `Skills (${profile?.skills?.length || 0})`, icon: Sparkles },
           { key: "projects", label: `Projects (${profile?.projects?.length || 0})`, icon: Code2 },
@@ -432,8 +432,8 @@ export default function CareerProfilePage() {
         <form onSubmit={handleSavePersonal} className="p-6 md:p-8 rounded-2xl bg-gray-900/70 border border-gray-800 space-y-6">
           <div className="flex items-center justify-between pb-4 border-b border-gray-800">
             <div>
-              <h2 className="text-base font-bold text-white">Personal Information & Demographics</h2>
-              <p className="text-xs text-gray-400 mt-0.5">Includes full country-code phone selection, DOB, and gender.</p>
+              <h2 className="text-base font-bold text-white">Personal Information</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Manage your personal details, contact information, and target roles.</p>
             </div>
             <button
               type="submit"
