@@ -6,8 +6,8 @@
 | :--- | :--- | :---: | :---: | :---: | :--- |
 | **Phase 0** | **Discovery & Architecture** | **COMPLETED** | 2026-11-03 | 2026-11-03 | Git initialized, `.gitignore`, `.env.example`, `context.md`, `ARCHITECTURE.md`, `DATABASE_DESIGN.md`, `API_SPECIFICATION.md`, `AGENT_ARCHITECTURE.md`, `DEVELOPMENT_ROADMAP.md`. |
 | **Phase 1** | Foundation, Database & Auth | **COMPLETED** | 2026-11-03 | 2026-11-03 | Next.js 15 App Router, Neon PostgreSQL synced, Prisma Client v6, Better Auth, multi-tenant isolation verified. |
-| **Phase 2** | Career Profile Management | **COMPLETED** | 2026-11-03 | 2026-11-03 | Full career profile builder (personal, education, work, projects, skills, certs) with completion score & Neon persistence. |
-| **Phase 3** | Job Description Intelligence | **READY** | - | - | Extraction engine for job requirements and keywords. |
+| **Phase 2** | Career Profile Management | **COMPLETED** | 2026-11-03 | 2026-11-04 | Full career profile builder (personal, education, work, projects, skills, certs) with completion score & Neon persistence. Employment type dropdown + color-coded badges (Full-Time/Internship/Contract etc). Build ✅ commit 99aab37. |
+| **Phase 3** | Job Description Intelligence | **IN PROGRESS** | - | - | Extraction engine for job requirements and keywords. |
 | **Phase 4** | Skill Matching Engine | PENDING | - | - | Deterministic scoring and skill gap analyzer. |
 | **Phase 5** | Resume Template Library | PENDING | - | - | ATS-friendly template gallery with dynamic layouts. |
 | **Phase 6** | AI Resume Generation | PENDING | - | - | Hallucination-free job-tailored resume generator. |
