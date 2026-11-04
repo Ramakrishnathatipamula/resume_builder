@@ -7,8 +7,13 @@ import { useSession } from "@/lib/auth-client";
 import {
   analyzeJobMatchAction,
   generateResumeAction,
+  calculateResumeAtsScoreAction,
 } from "@/server/actions/resume-generator";
-import type { JobMatchAnalysis, TailoredResumeResult } from "@/server/services/ai";
+import type {
+  JobMatchAnalysis,
+  TailoredResumeResult,
+  ResumeAtsScoreResult,
+} from "@/server/services/ai";
 import {
   RESUME_TEMPLATES,
   getTemplateById,
@@ -48,6 +53,10 @@ import {
   Mail,
   Phone,
   MapPin,
+  Target,
+  ShieldCheck,
+  Zap,
+  BookMarked,
 } from "lucide-react";
 
 const SAMPLE_JOB_DESCRIPTION = `Job Title: Senior Full-Stack Engineer
@@ -162,6 +171,10 @@ export default function DashboardPage() {
   const [copied, setCopied] = useState(false);
   const [resumeViewMode, setResumeViewMode] = useState<"visual" | "latex">("visual");
 
+  // ATS Score State
+  const [atsScore, setAtsScore] = useState<ResumeAtsScoreResult | null>(null);
+  const [loadingAtsScore, setLoadingAtsScore] = useState(false);
+
   // Template State
   const [customTemplates, setCustomTemplates] = useState<ResumeTemplate[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState("my-template-1");
@@ -226,6 +239,7 @@ export default function DashboardPage() {
     setError(null);
     setGeneratingResume(true);
     setCurrentResumeTemplateId(templateId);
+    setAtsScore(null);
 
     const all = [...customTemplates, ...RESUME_TEMPLATES];
     const tmplObj = all.find((t) => t.id === templateId);
@@ -275,6 +289,24 @@ export default function DashboardPage() {
 
   const handlePrintResume = () => {
     window.print();
+  };
+
+  const handleCheckAtsScore = async () => {
+    if (!tailoredResume || !currentJobId) return;
+    setLoadingAtsScore(true);
+    setAtsScore(null);
+    try {
+      const res = await calculateResumeAtsScoreAction(currentJobId, tailoredResume);
+      if (res.success && res.data) {
+        setAtsScore(res.data);
+      } else {
+        setError(res.error || "Failed to calculate ATS score.");
+      }
+    } catch (err: any) {
+      setError(err?.message || "ATS scoring failed.");
+    } finally {
+      setLoadingAtsScore(false);
+    }
   };
 
   const allAvailableTemplates = [...customTemplates, ...RESUME_TEMPLATES];
@@ -896,7 +928,144 @@ export default function DashboardPage() {
                     <><Copy className="w-3.5 h-3.5 text-gray-400" /><span>Copy LaTeX</span></>
                   )}
                 </button>
+
+                {/* ATS Score Button */}
+                <button
+                  type="button"
+                  onClick={handleCheckAtsScore}
+                  disabled={loadingAtsScore}
+                  className="px-3.5 py-2.5 rounded-xl bg-violet-950 hover:bg-violet-900 border border-violet-700/60 text-violet-200 font-semibold text-xs flex items-center gap-2 transition cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {loadingAtsScore ? (
+                    <><Loader2 className="w-3.5 h-3.5 animate-spin" /><span>Scoring…</span></>
+                  ) : (
+                    <><Target className="w-3.5 h-3.5" /><span>Check ATS Score</span></>
+                  )}
+                </button>
               </div>
+
+              {/* ── ATS SCORE RESULTS PANEL ── */}
+              {atsScore && (
+                <div className="rounded-2xl bg-gray-950 border border-violet-800/40 overflow-hidden shadow-2xl">
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-5 py-3.5 bg-violet-950/40 border-b border-violet-800/40">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-violet-400" />
+                      <span className="text-sm font-bold text-white">ATS Resume Score</span>
+                      <span className="text-xs text-gray-400">— vs. Target Job Description</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAtsScore(null)}
+                      className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-gray-800 transition cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="p-5 space-y-5">
+                    {/* Score ring + grade + summary */}
+                    <div className="flex items-center gap-6 flex-wrap">
+                      <div className="relative shrink-0">
+                        <ScoreRing score={atsScore.overallScore} size={110} />
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <span className="text-2xl font-black text-white leading-none">{atsScore.overallScore}</span>
+                          <span className="text-[10px] text-gray-400 leading-none mt-0.5">/ 100</span>
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-[180px] space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-lg font-black ${
+                            atsScore.grade === "A+" || atsScore.grade === "A"
+                              ? "text-emerald-400"
+                              : atsScore.grade === "B+" || atsScore.grade === "B"
+                              ? "text-amber-400"
+                              : "text-red-400"
+                          }`}>
+                            Grade: {atsScore.grade}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-300 leading-relaxed">{atsScore.atsAssessmentSummary}</p>
+                      </div>
+                    </div>
+
+                    {/* Category Breakdown */}
+                    <div className="space-y-3">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Score Breakdown</p>
+                      <CategoryBar label="Keyword Match (40%)" score={atsScore.categoryBreakdown.keywordMatch} icon={Target} color="emerald" />
+                      <CategoryBar label="ATS Formatting (25%)" score={atsScore.categoryBreakdown.atsFormatting} icon={ShieldCheck} color="blue" />
+                      <CategoryBar label="Action Verbs & Impact (20%)" score={atsScore.categoryBreakdown.actionVerbsAndImpact} icon={Zap} color="purple" />
+                      <CategoryBar label="Section Completeness (15%)" score={atsScore.categoryBreakdown.sectionCompleteness} icon={BookMarked} color="amber" />
+                    </div>
+
+                    {/* Keywords */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Matched */}
+                      {atsScore.matchedKeywords.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold text-emerald-400 flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Matched Keywords ({atsScore.matchedKeywords.length})
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {atsScore.matchedKeywords.map((kw) => (
+                              <span key={kw} className="px-2 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-800/60 text-emerald-300 text-[11px] font-medium">
+                                {kw}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {/* Missing */}
+                      {atsScore.missingKeywords.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold text-red-400 flex items-center gap-1.5">
+                            <AlertTriangle className="w-3.5 h-3.5" />
+                            Missing Keywords ({atsScore.missingKeywords.length})
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {atsScore.missingKeywords.map((kw) => (
+                              <span key={kw} className="px-2 py-0.5 rounded-full bg-red-950/60 border border-red-800/60 text-red-300 text-[11px] font-medium">
+                                {kw}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Strengths & Improvements */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {atsScore.strengths.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Strengths</p>
+                          <ul className="space-y-1.5">
+                            {atsScore.strengths.map((s, i) => (
+                              <li key={i} className="flex items-start gap-2 text-xs text-gray-300">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                                {s}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {atsScore.improvements.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider">Improvements</p>
+                          <ul className="space-y-1.5">
+                            {atsScore.improvements.map((s, i) => (
+                              <li key={i} className="flex items-start gap-2 text-xs text-gray-300">
+                                <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                                {s}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* VIEW 1: RAW LATEX SOURCE CODE */}
               {resumeViewMode === "latex" ? (
