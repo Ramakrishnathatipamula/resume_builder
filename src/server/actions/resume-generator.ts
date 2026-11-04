@@ -5,7 +5,10 @@ import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { analyzeJobAndGenerateResume, CandidateProfileData } from "../services/ai";
 
-export async function processJobAndGenerateResume(jobDescriptionText: string) {
+export async function processJobAndGenerateResume(
+  jobDescriptionText: string,
+  templateId?: string
+) {
   if (!jobDescriptionText || jobDescriptionText.trim().length < 20) {
     return {
       success: false,
@@ -88,8 +91,12 @@ export async function processJobAndGenerateResume(jobDescriptionText: string) {
       })),
     };
 
-    // 4. Run AI Analysis & Resume Tailoring
-    const analysis = await analyzeJobAndGenerateResume(jobDescriptionText, candidateData);
+    // 4. Run AI Analysis & Resume Tailoring for Selected Template
+    const analysis = await analyzeJobAndGenerateResume(
+      jobDescriptionText,
+      candidateData,
+      templateId
+    );
 
     // 5. Save Job Description to Neon DB
     const savedJob = await db.jobDescription.create({
@@ -138,7 +145,7 @@ export async function processJobAndGenerateResume(jobDescriptionText: string) {
       });
     }
 
-    // 8. Save Generated Resume to Neon DB
+    // 8. Save Generated Resume to Neon DB with Chosen Template
     const savedResume = await db.resume.create({
       data: {
         userId,
@@ -146,6 +153,7 @@ export async function processJobAndGenerateResume(jobDescriptionText: string) {
         matchResultId: matchResult.id,
         title: `${analysis.jobTitle} - ${analysis.company}`,
         targetRole: analysis.jobTitle,
+        templateName: templateId || "jakes-tech",
         contentJson: analysis.tailoredResume as any,
         latexSource: analysis.tailoredResume.latexSource,
         versions: {
@@ -153,7 +161,7 @@ export async function processJobAndGenerateResume(jobDescriptionText: string) {
             versionNum: 1,
             contentJson: analysis.tailoredResume as any,
             latexSource: analysis.tailoredResume.latexSource,
-            note: "Initial AI tailored generation",
+            note: `Initial generation using ${templateId || "jakes-tech"} template`,
           },
         },
       },
@@ -164,6 +172,7 @@ export async function processJobAndGenerateResume(jobDescriptionText: string) {
       data: {
         jobId: savedJob.id,
         resumeId: savedResume.id,
+        templateId: templateId || "jakes-tech",
         analysis,
       },
     };

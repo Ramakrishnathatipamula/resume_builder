@@ -1,8 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { processJobAndGenerateResume } from "@/server/actions/resume-generator";
 import type { JobAnalysisResult } from "@/server/services/ai";
+import {
+  RESUME_TEMPLATES,
+  getTemplateById,
+  ResumeTemplate,
+} from "@/lib/templates-data";
 import {
   Sparkles,
   FileText,
@@ -25,6 +31,10 @@ import {
   Layers,
   TrendingUp,
   Info,
+  Printer,
+  X,
+  LayoutTemplate,
+  RefreshCw,
 } from "lucide-react";
 
 const SAMPLE_JOB_DESCRIPTION = `Job Title: Senior Full-Stack Engineer
@@ -122,25 +132,52 @@ function CategoryBar({
 }
 
 export default function DashboardPage() {
+  const searchParams = useSearchParams();
   const [jobDescription, setJobDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<JobAnalysisResult | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Template Selection State
+  const [selectedTemplateId, setSelectedTemplateId] = useState("jakes-tech");
+  const [currentResumeTemplateId, setCurrentResumeTemplateId] = useState("jakes-tech");
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+
   const [activeResultTab, setActiveResultTab] = useState<
     "overview" | "skills" | "education" | "roadmap" | "resume"
   >("overview");
 
-  const handleGenerate = async (e: React.FormEvent) => {
+  useEffect(() => {
+    const urlTmpl = searchParams.get("template");
+    const savedTmpl = localStorage.getItem("preferredResumeTemplate");
+    if (urlTmpl) {
+      setSelectedTemplateId(urlTmpl);
+      setCurrentResumeTemplateId(urlTmpl);
+    } else if (savedTmpl) {
+      setSelectedTemplateId(savedTmpl);
+      setCurrentResumeTemplateId(savedTmpl);
+    }
+  }, [searchParams]);
+
+  const handleOpenTemplateModal = (e: React.FormEvent) => {
     e.preventDefault();
     if (!jobDescription.trim()) {
       setError("Please paste or type a job description to begin.");
       return;
     }
     setError(null);
+    setShowTemplateModal(true);
+  };
+
+  const handleExecuteGeneration = async (templateId: string) => {
+    setShowTemplateModal(false);
+    setError(null);
     setLoading(true);
+    setCurrentResumeTemplateId(templateId);
+
     try {
-      const res = await processJobAndGenerateResume(jobDescription);
+      const res = await processJobAndGenerateResume(jobDescription, templateId);
       if (!res.success || !res.data) {
         setError(res.error || "Failed to analyze job description.");
       } else {
@@ -175,11 +212,17 @@ export default function DashboardPage() {
     document.body.removeChild(link);
   };
 
+  const handlePrintResume = () => {
+    window.print();
+  };
+
+  const activeTemplate = getTemplateById(currentResumeTemplateId);
+
   return (
     <div className="max-w-4xl mx-auto py-4">
 
       {/* ════════════════════════════════════════════════════════════ */}
-      {/* INPUT STATE                                                 */}
+      {/* 1. INPUT STATE                                              */}
       {/* ════════════════════════════════════════════════════════════ */}
       {!result ? (
         <div className="space-y-6">
@@ -191,7 +234,7 @@ export default function DashboardPage() {
               Job Description & Resume Generator
             </h1>
             <p className="text-sm text-gray-400 mt-2 leading-relaxed">
-              Paste your target job description. We'll calculate your exact skill match, identify gaps with a learning roadmap, and generate a tailored resume.
+              Paste your target job description. When you click Generate Resume, you can pick your preferred ATS template, calculate your skill match, and export to LaTeX / Overleaf or PDF.
             </p>
           </div>
 
@@ -202,7 +245,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          <form onSubmit={handleGenerate} className="space-y-4">
+          <form onSubmit={handleOpenTemplateModal} className="space-y-4">
             <div>
               <div className="flex justify-between items-center mb-2">
                 <label className="text-xs font-semibold uppercase tracking-wider text-gray-300">
@@ -211,7 +254,7 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={() => setJobDescription(SAMPLE_JOB_DESCRIPTION)}
-                  className="text-xs text-indigo-400 hover:text-indigo-300 font-medium transition"
+                  className="text-xs text-indigo-400 hover:text-indigo-300 font-medium transition cursor-pointer"
                 >
                   Paste Sample JD
                 </button>
@@ -221,7 +264,7 @@ export default function DashboardPage() {
                 rows={12}
                 value={jobDescription}
                 onChange={(e) => setJobDescription(e.target.value)}
-                placeholder="Paste the full job description here..."
+                placeholder="Paste the full job description here (responsibilities, required tech stack, qualifications)..."
                 className="w-full p-4 rounded-2xl bg-gray-950/80 border border-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm leading-relaxed transition font-mono"
               />
               <div className="flex justify-between mt-2 px-1 text-xs text-gray-500">
@@ -242,12 +285,12 @@ export default function DashboardPage() {
               {loading ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Analyzing & Generating Resume...</span>
+                  <span>Tailoring Resume with {activeTemplate.name}...</span>
                 </>
               ) : (
                 <>
                   <Sparkles className="w-5 h-5" />
-                  <span>Generate Resume</span>
+                  <span>Generate Resume (Choose Template)</span>
                   <ArrowRight className="w-5 h-5 ml-1" />
                 </>
               )}
@@ -256,24 +299,30 @@ export default function DashboardPage() {
         </div>
       ) : (
         /* ════════════════════════════════════════════════════════════ */
-        /* RESULTS STATE                                               */
+        /* 2. RESULTS STATE                                            */
         /* ════════════════════════════════════════════════════════════ */
         <div className="space-y-6 animate-in fade-in duration-500">
 
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between pb-5 border-b border-gray-800 gap-4">
             <div>
-              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-950/60 border border-indigo-800/60 text-indigo-300 inline-flex items-center gap-1.5 mb-2">
-                <Briefcase className="w-3 h-3" />
-                {result.company || "Target Company"}
-              </span>
+              <div className="flex items-center gap-2 flex-wrap mb-2">
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-950/60 border border-indigo-800/60 text-indigo-300 inline-flex items-center gap-1.5">
+                  <Briefcase className="w-3 h-3" />
+                  {result.company || "Target Company"}
+                </span>
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-purple-950/60 border border-purple-800/60 text-purple-300 inline-flex items-center gap-1.5">
+                  <LayoutTemplate className="w-3 h-3" />
+                  {activeTemplate.name}
+                </span>
+              </div>
               <h1 className="text-2xl font-extrabold text-white tracking-tight">
                 {result.jobTitle || "Job Analysis"}
               </h1>
             </div>
             <button
               onClick={() => { setResult(null); setJobDescription(""); }}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-900 hover:bg-gray-800 border border-gray-800 text-sm font-medium text-gray-300 transition shrink-0"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-900 hover:bg-gray-800 border border-gray-800 text-sm font-medium text-gray-300 transition shrink-0 cursor-pointer"
             >
               <RotateCcw className="w-4 h-4" />
               <span>Analyze Another Job</span>
@@ -294,7 +343,7 @@ export default function DashboardPage() {
                 <button
                   key={tab}
                   onClick={() => setActiveResultTab(tab)}
-                  className={`px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
+                  className={`px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
                     activeResultTab === tab
                       ? "bg-indigo-600 text-white shadow"
                       : "text-gray-400 hover:text-white"
@@ -311,10 +360,8 @@ export default function DashboardPage() {
           {/* ═══════════════════════════════════════════════════════════ */}
           {activeResultTab === "overview" && (
             <div className="space-y-5">
-
               {/* Score Hero */}
               <div className="p-6 rounded-2xl bg-gray-900/70 border border-gray-800 flex flex-col md:flex-row items-center gap-8">
-                {/* Ring */}
                 <div className="relative shrink-0">
                   <ScoreRing score={result.matchScore} size={130} />
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -330,10 +377,9 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {/* Score Breakdown Bars */}
                 <div className="flex-1 w-full space-y-4">
                   <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">
-                    Score Breakdown
+                    Compatibility Score Breakdown
                   </p>
                   <CategoryBar label="Technical Skills" score={result.scoreBreakdown?.technical ?? 0} icon={Code2} color="emerald" />
                   <CategoryBar label="Work Experience" score={result.scoreBreakdown?.experience ?? 0} icon={Briefcase} color="blue" />
@@ -392,10 +438,7 @@ export default function DashboardPage() {
           {/* ═══════════════════════════════════════════════════════════ */}
           {activeResultTab === "skills" && (
             <div className="space-y-5">
-
-              {/* Technical Skills */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Matched */}
                 <div className="p-5 rounded-2xl bg-emerald-950/20 border border-emerald-900/40 space-y-3">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
                     <CheckCircle2 className="w-3.5 h-3.5" />
@@ -407,12 +450,11 @@ export default function DashboardPage() {
                         ✓ {s}
                       </span>
                     )) : (
-                      <span className="text-xs text-gray-400">No direct matches found — build your profile first.</span>
+                      <span className="text-xs text-gray-400">No direct matches found.</span>
                     )}
                   </div>
                 </div>
 
-                {/* Missing */}
                 <div className="p-5 rounded-2xl bg-red-950/20 border border-red-900/40 space-y-3">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-red-400 flex items-center gap-2">
                     <AlertTriangle className="w-3.5 h-3.5" />
@@ -430,12 +472,11 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Partial Matches */}
               {result.partialMatches && result.partialMatches.length > 0 && (
                 <div className="p-5 rounded-2xl bg-amber-950/20 border border-amber-900/40 space-y-3">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-2">
                     <Layers className="w-3.5 h-3.5" />
-                    Partial Matches — Basic Exposure, Not Full Proficiency ({result.partialMatches.length})
+                    Partial Matches ({result.partialMatches.length})
                   </h3>
                   <div className="flex flex-wrap gap-2">
                     {result.partialMatches.map((s) => (
@@ -447,7 +488,6 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {/* Soft Skills */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="p-5 rounded-2xl bg-blue-950/20 border border-blue-900/40 space-y-3">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-2">
@@ -460,7 +500,7 @@ export default function DashboardPage() {
                         ✓ {s}
                       </span>
                     )) : (
-                      <span className="text-xs text-gray-400">Add soft skills to your profile to match these.</span>
+                      <span className="text-xs text-gray-400">Add soft skills to your profile.</span>
                     )}
                   </div>
                 </div>
@@ -489,8 +529,6 @@ export default function DashboardPage() {
           {/* ═══════════════════════════════════════════════════════════ */}
           {activeResultTab === "education" && (
             <div className="space-y-5">
-
-              {/* Education Comparison */}
               <div className={`p-6 rounded-2xl border space-y-4 ${
                 result.educationMatch?.matched
                   ? "bg-emerald-950/20 border-emerald-900/40"
@@ -507,7 +545,6 @@ export default function DashboardPage() {
                     {result.educationMatch?.matched ? "✓ Satisfied" : "⚠ Partial"}
                   </span>
                 </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="p-4 rounded-xl bg-gray-950/60 border border-gray-800">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Job Requires</p>
@@ -518,14 +555,12 @@ export default function DashboardPage() {
                     <p className="text-sm text-white font-medium">{result.educationMatch?.candidate || "Not provided"}</p>
                   </div>
                 </div>
-
                 <div className="flex items-start gap-2 text-sm text-gray-300">
                   <Info className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
                   <span>{result.educationMatch?.note}</span>
                 </div>
               </div>
 
-              {/* Experience Comparison */}
               <div className={`p-6 rounded-2xl border space-y-4 ${
                 result.experienceMatch?.sufficient
                   ? "bg-emerald-950/20 border-emerald-900/40"
@@ -542,7 +577,6 @@ export default function DashboardPage() {
                     {result.experienceMatch?.sufficient ? "✓ Sufficient" : "✗ Below Requirement"}
                   </span>
                 </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="p-4 rounded-xl bg-gray-950/60 border border-gray-800">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Job Requires</p>
@@ -553,7 +587,6 @@ export default function DashboardPage() {
                     <p className="text-sm text-white font-medium">{result.experienceMatch?.candidate || "Not provided"}</p>
                   </div>
                 </div>
-
                 <div className="flex items-start gap-2 text-sm text-gray-300">
                   <Info className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
                   <span>{result.experienceMatch?.note}</span>
@@ -577,10 +610,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {result.roadmap.map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="p-5 rounded-2xl bg-gray-900/70 border border-gray-800 space-y-3"
-                      >
+                      <div key={idx} className="p-5 rounded-2xl bg-gray-900/70 border border-gray-800 space-y-3">
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-white">{item.skillName}</span>
                           <div className="flex items-center gap-2">
@@ -599,7 +629,6 @@ export default function DashboardPage() {
                             </span>
                           </div>
                         </div>
-
                         <ul className="space-y-1.5">
                           {item.recommendations.map((rec, rIdx) => (
                             <li key={rIdx} className="text-xs text-gray-300 flex items-start gap-2">
@@ -608,7 +637,6 @@ export default function DashboardPage() {
                             </li>
                           ))}
                         </ul>
-
                         {item.practicalProject && (
                           <div className="p-3 rounded-lg bg-gray-950/90 border border-gray-800 text-xs">
                             <span className="font-semibold text-indigo-300 block mb-1">🛠️ Build to prove it:</span>
@@ -630,12 +658,40 @@ export default function DashboardPage() {
           )}
 
           {/* ═══════════════════════════════════════════════════════════ */}
-          {/* TAB: GENERATED RESUME                                       */}
+          {/* TAB: GENERATED RESUME (WITH TEMPLATE SWITCH & PRINT PDF)    */}
           {/* ═══════════════════════════════════════════════════════════ */}
           {activeResultTab === "resume" && (
             <div className="space-y-5">
-              {/* Export Buttons */}
+              {/* Template Info & Action Bar */}
+              <div className="p-4 rounded-2xl bg-gray-900/80 border border-gray-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
+                    <LayoutTemplate className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-white">{activeTemplate.name}</span>
+                      <span className="text-[10px] px-2 py-0.2 rounded-full bg-indigo-950 border border-indigo-800 text-indigo-300 font-semibold">
+                        {activeTemplate.badge}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-400">LaTeX layout engineered specifically for this style</p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowTemplateModal(true)}
+                  className="px-3.5 py-1.5 rounded-xl bg-gray-950 hover:bg-gray-800 border border-gray-800 text-xs font-semibold text-indigo-300 hover:text-white flex items-center gap-1.5 transition self-start md:self-auto cursor-pointer"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Switch Template</span>
+                </button>
+              </div>
+
+              {/* Action Buttons: Overleaf + Print PDF + .tex + Copy */}
               <div className="flex flex-wrap items-center gap-2">
+                {/* 1. Open in Overleaf */}
                 <form action="https://www.overleaf.com/docs" method="POST" target="_blank">
                   <input type="hidden" name="snip" value={result.tailoredResume.latexSource} />
                   <button
@@ -643,19 +699,35 @@ export default function DashboardPage() {
                     className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition cursor-pointer"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
-                    Open in Overleaf
+                    <span>Open in Overleaf</span>
                   </button>
                 </form>
+
+                {/* 2. Download / Save as PDF */}
                 <button
+                  type="button"
+                  onClick={handlePrintResume}
+                  className="px-3.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center gap-2 shadow-lg shadow-indigo-600/20 transition cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Download / Print PDF</span>
+                </button>
+
+                {/* 3. Download .tex Source */}
+                <button
+                  type="button"
                   onClick={handleDownloadLatex}
-                  className="px-3.5 py-2.5 rounded-xl bg-gray-950 hover:bg-gray-800 border border-gray-800 text-white font-medium text-xs flex items-center gap-2 transition"
+                  className="px-3.5 py-2.5 rounded-xl bg-gray-950 hover:bg-gray-800 border border-gray-800 text-white font-medium text-xs flex items-center gap-2 transition cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5 text-gray-400" />
-                  Download .tex
+                  <span>Download .tex</span>
                 </button>
+
+                {/* 4. Copy LaTeX */}
                 <button
+                  type="button"
                   onClick={handleCopyLatex}
-                  className="px-3.5 py-2.5 rounded-xl bg-gray-950 hover:bg-gray-800 border border-gray-800 text-white font-medium text-xs flex items-center gap-2 transition"
+                  className="px-3.5 py-2.5 rounded-xl bg-gray-950 hover:bg-gray-800 border border-gray-800 text-white font-medium text-xs flex items-center gap-2 transition cursor-pointer"
                 >
                   {copied ? (
                     <><Check className="w-3.5 h-3.5 text-emerald-400" /><span className="text-emerald-400">Copied!</span></>
@@ -665,36 +737,57 @@ export default function DashboardPage() {
                 </button>
               </div>
 
-              {/* Resume Preview */}
-              <div className="p-6 rounded-2xl bg-gray-950/90 border border-gray-800 space-y-5 text-gray-200">
-                <div className="border-b border-gray-800 pb-4">
-                  <h3 className="text-lg font-bold text-white">{result.tailoredResume.title}</h3>
-                  <p className="text-xs text-indigo-400 font-medium">{result.tailoredResume.targetRole}</p>
-                  <p className="text-xs text-gray-300 mt-2 leading-relaxed">{result.tailoredResume.summary}</p>
+              {/* Printable & Screen Resume Preview */}
+              <div
+                id="careerforge-resume-document"
+                className="p-8 rounded-2xl bg-gray-950 border border-gray-800 space-y-6 text-gray-200 shadow-2xl print:bg-white print:text-black print:p-0 print:border-0"
+              >
+                {/* Header */}
+                <div className="border-b border-gray-800 print:border-black pb-4">
+                  <h2 className="text-xl font-bold text-white print:text-black">
+                    {result.tailoredResume.title}
+                  </h2>
+                  <p className="text-xs text-indigo-400 print:text-gray-700 font-semibold mt-0.5">
+                    {result.tailoredResume.targetRole}
+                  </p>
+                  <p className="text-xs text-gray-300 print:text-gray-800 mt-2 leading-relaxed">
+                    {result.tailoredResume.summary}
+                  </p>
                 </div>
 
+                {/* Skills */}
                 {result.tailoredResume.skills && result.tailoredResume.skills.length > 0 && (
                   <div>
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Technical Skills</h4>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 print:text-black mb-2">
+                      Technical Skills
+                    </h3>
                     <div className="flex flex-wrap gap-1.5">
                       {result.tailoredResume.skills.map((s) => (
-                        <span key={s} className="px-2 py-0.5 rounded bg-gray-900 border border-gray-800 text-xs text-gray-300">{s}</span>
+                        <span
+                          key={s}
+                          className="px-2 py-0.5 rounded bg-gray-900 print:bg-gray-100 print:text-black border border-gray-800 print:border-gray-300 text-xs text-gray-300"
+                        >
+                          {s}
+                        </span>
                       ))}
                     </div>
                   </div>
                 )}
 
+                {/* Work Experience */}
                 {result.tailoredResume.experiences && result.tailoredResume.experiences.length > 0 && (
                   <div>
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Work Experience</h4>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 print:text-black mb-3">
+                      Work Experience
+                    </h3>
                     <div className="space-y-4">
                       {result.tailoredResume.experiences.map((exp, i) => (
                         <div key={i} className="space-y-1">
                           <div className="flex justify-between items-center text-xs">
-                            <strong className="text-white">{exp.title}</strong>
-                            <span className="text-gray-400">{exp.company}</span>
+                            <strong className="text-white print:text-black font-bold">{exp.title}</strong>
+                            <span className="text-gray-400 print:text-gray-600 font-medium">{exp.company}</span>
                           </div>
-                          <ul className="list-disc pl-4 space-y-1 text-xs text-gray-300">
+                          <ul className="list-disc pl-4 space-y-1 text-xs text-gray-300 print:text-gray-800">
                             {exp.bullets.map((b, bi) => <li key={bi}>{b}</li>)}
                           </ul>
                         </div>
@@ -703,18 +796,23 @@ export default function DashboardPage() {
                   </div>
                 )}
 
+                {/* Projects */}
                 {result.tailoredResume.projects && result.tailoredResume.projects.length > 0 && (
                   <div>
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Projects</h4>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 print:text-black mb-3">
+                      Projects
+                    </h3>
                     <div className="space-y-4">
                       {result.tailoredResume.projects.map((proj, i) => (
                         <div key={i} className="space-y-1">
                           <div className="flex justify-between items-center text-xs">
-                            <strong className="text-white">{proj.name}</strong>
-                            <span className="text-gray-400 text-[11px]">{proj.technologies?.join(", ")}</span>
+                            <strong className="text-white print:text-black font-bold">{proj.name}</strong>
+                            <span className="text-gray-400 print:text-gray-600 text-[11px] font-mono">
+                              {proj.technologies?.join(", ")}
+                            </span>
                           </div>
-                          <p className="text-xs text-gray-300">{proj.description}</p>
-                          <ul className="list-disc pl-4 space-y-1 text-xs text-gray-300">
+                          <p className="text-xs text-gray-300 print:text-gray-800">{proj.description}</p>
+                          <ul className="list-disc pl-4 space-y-1 text-xs text-gray-300 print:text-gray-800">
                             {proj.bullets.map((b, bi) => <li key={bi}>{b}</li>)}
                           </ul>
                         </div>
@@ -727,6 +825,135 @@ export default function DashboardPage() {
           )}
         </div>
       )}
+
+      {/* ════════════════════════════════════════════════════════════ */}
+      {/* 3. TEMPLATE SELECTION POPUP MODAL                            */}
+      {/* ════════════════════════════════════════════════════════════ */}
+      {showTemplateModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div className="w-full max-w-3xl my-6 p-6 rounded-3xl bg-gray-900 border border-gray-800 shadow-2xl space-y-6">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-950/80 border border-indigo-800/80 text-[11px] font-semibold text-indigo-300 mb-1.5">
+                  <LayoutTemplate className="w-3.5 h-3.5" />
+                  <span>Choose Resume Template</span>
+                </div>
+                <h2 className="text-xl font-bold text-white">Select Your Resume Template</h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Your verified credentials will be engineered into the chosen LaTeX format.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTemplateModal(false)}
+                className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Template Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto pr-1">
+              {RESUME_TEMPLATES.map((tmpl) => {
+                const isSelected = selectedTemplateId === tmpl.id;
+                const badgeStyles = {
+                  indigo: "bg-indigo-950/80 border-indigo-800/80 text-indigo-300",
+                  emerald: "bg-emerald-950/80 border-emerald-800/80 text-emerald-300",
+                  purple: "bg-purple-950/80 border-purple-800/80 text-purple-300",
+                  amber: "bg-amber-950/80 border-amber-800/80 text-amber-300",
+                }[tmpl.badgeColor];
+
+                return (
+                  <div
+                    key={tmpl.id}
+                    onClick={() => setSelectedTemplateId(tmpl.id)}
+                    className={`p-4 rounded-2xl border transition cursor-pointer flex flex-col justify-between ${
+                      isSelected
+                        ? "bg-indigo-950/40 border-indigo-500 shadow-xl shadow-indigo-600/10 ring-2 ring-indigo-500/50"
+                        : "bg-gray-950/60 border-gray-800/80 hover:border-gray-700 hover:bg-gray-950"
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border ${badgeStyles}`}>
+                          {tmpl.badge}
+                        </span>
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center border ${
+                          isSelected
+                            ? "bg-indigo-600 border-indigo-500 text-white"
+                            : "border-gray-700 bg-gray-900"
+                        }`}>
+                          {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                        </div>
+                      </div>
+
+                      <h4 className="font-bold text-white text-sm mb-0.5">{tmpl.name}</h4>
+                      <p className="text-[11px] text-gray-400 mb-2 leading-relaxed">{tmpl.description}</p>
+
+                      <div className="space-y-1 mb-2">
+                        {tmpl.features.slice(0, 2).map((feat, idx) => (
+                          <div key={idx} className="flex items-center gap-1.5 text-[11px] text-gray-300">
+                            <span className="text-indigo-400 font-bold">•</span>
+                            <span>{feat}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-gray-800/60 text-[10px] text-gray-500">
+                      Ideal for: <span className="text-gray-400">{tmpl.recommendedFor.split(",").slice(0, 3).join(", ")}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Modal Bottom Buttons */}
+            <div className="flex items-center justify-between pt-3 border-t border-gray-800">
+              <button
+                type="button"
+                onClick={() => setShowTemplateModal(false)}
+                className="px-4 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-semibold transition cursor-pointer"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleExecuteGeneration(selectedTemplateId)}
+                className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition cursor-pointer"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>Generate with {getTemplateById(selectedTemplateId).name.split(" ")[0]}</span>
+                <ArrowRight className="w-4 h-4 ml-0.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Global CSS for Print / Download PDF */}
+      <style jsx global>{`
+        @media print {
+          body {
+            background: white !important;
+            color: black !important;
+          }
+          aside, header, nav, button, form, .no-print {
+            display: none !important;
+          }
+          #careerforge-resume-document {
+            background: white !important;
+            color: black !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

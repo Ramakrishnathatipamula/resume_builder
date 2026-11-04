@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { getTemplateById } from "@/lib/templates-data";
 
 function getGenAI() {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GEMINI_APIKEY || "";
@@ -162,8 +163,11 @@ export interface JobAnalysisResult {
 // ─── MAIN AI FUNCTION ─────────────────────────────────────────────────────────
 export async function analyzeJobAndGenerateResume(
   jobDescription: string,
-  candidate: CandidateProfileData
+  candidate: CandidateProfileData,
+  templateId?: string
 ): Promise<JobAnalysisResult> {
+  const selectedTemplate = getTemplateById(templateId);
+
   const prompt = `
 You are the CareerForge AI intelligence engine — a senior career advisor and resume specialist.
 
@@ -175,13 +179,20 @@ Your tasks:
 5. Compare education and experience requirements specifically.
 6. Identify which of the candidate's projects are most relevant to this job.
 7. Build an actionable learning roadmap for the skill gaps.
-8. Generate a tailored, honest resume using ONLY the candidate's real data.
+8. Generate a tailored, honest resume formatted precisely for the selected template: "${selectedTemplate.name}".
 
 === CANDIDATE PROFILE ===
 ${JSON.stringify(candidate, null, 2)}
 
 === JOB DESCRIPTION ===
 ${jobDescription}
+
+=== SELECTED RESUME TEMPLATE ===
+Name: ${selectedTemplate.name}
+Category: ${selectedTemplate.category}
+Style: ${selectedTemplate.subtitle}
+Template LaTeX Layout Rules:
+${selectedTemplate.latexGuidelines}
 
 === RULES & GUARDRAILS ===
 1. NEVER fabricate companies, degrees, dates, skills, or achievements the candidate does not have.
@@ -192,7 +203,7 @@ ${jobDescription}
    - experience: based on years and type vs what job requires
    - education: based on degree level vs what job requires
    - projects: based on how many projects have overlapping tech with the JD
-5. LaTeX must be a complete standalone document (\\documentclass to \\end{document}).
+5. The "latexSource" MUST be a complete standalone document (\\documentclass to \\end{document}) formatted to the exact styling rules of the "${selectedTemplate.name}" template. Escape special characters (& as \\&, % as \\%, _ as \\_, # as \\#). Ensure it compiles with zero errors on Overleaf / pdflatex.
 
 Return a JSON object with EXACTLY this structure:
 {
