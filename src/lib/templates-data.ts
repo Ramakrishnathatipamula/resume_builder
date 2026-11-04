@@ -1,3 +1,5 @@
+import { USER_CUSTOM_TEMPLATES } from "./custom-latex-templates";
+
 export interface ResumeTemplate {
   id: string;
   name: string;
@@ -11,7 +13,25 @@ export interface ResumeTemplate {
   latexGuidelines: string;
 }
 
+const formattedUserTemplates: ResumeTemplate[] = (USER_CUSTOM_TEMPLATES || []).map((t) => ({
+  id: t.id,
+  name: t.name,
+  subtitle: t.subtitle || "Custom User LaTeX Template",
+  category: t.category || "Custom Template",
+  badge: "Pasted Template",
+  badgeColor: "purple" as const,
+  description: "User-defined custom LaTeX template from custom-latex-templates.ts.",
+  recommendedFor: "Custom Tailored Applications",
+  features: [
+    "User-defined LaTeX layout & macros",
+    "Overleaf compatible",
+    "Configured in custom-latex-templates.ts",
+  ],
+  latexGuidelines: t.latexCode,
+}));
+
 export const RESUME_TEMPLATES: ResumeTemplate[] = [
+  ...formattedUserTemplates,
   {
     id: "jakes-tech",
     name: "Jake's Modern Tech (FAANG Standard)",
