@@ -1,7 +1,46 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const apiKey = process.env.GEMINI_API_KEY || "";
-const genAI = new GoogleGenerativeAI(apiKey);
+function getGenAI() {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GEMINI_APIKEY || "";
+  if (!apiKey) {
+    throw new Error(
+      "GEMINI_API_KEY is not configured in .env. Please add your Gemini API key."
+    );
+  }
+  return new GoogleGenerativeAI(apiKey);
+}
+
+const FALLBACK_MODELS = [
+  "gemini-3.1-flash-lite-preview",
+  "gemini-3.5-flash",
+  "gemini-3.5-flash-lite",
+  "gemini-flash-lite-latest",
+  "gemini-3.8-flash",
+];
+
+async function generateWithFallback(
+  prompt: string,
+  generationConfig?: any
+): Promise<string> {
+  const genAI = getGenAI();
+  let lastError: any = null;
+
+  for (const modelName of FALLBACK_MODELS) {
+    try {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig,
+      });
+      const response = await model.generateContent(prompt);
+      return response.response.text();
+    } catch (err: any) {
+      console.warn(`[CareerForge AI] Model ${modelName} failed, attempting next fallback:`, err?.message || err);
+      lastError = err;
+    }
+  }
+
+  throw lastError || new Error("All Gemini model fallbacks failed.");
+}
 
 export interface CandidateProfileData {
   name: string;
@@ -125,14 +164,6 @@ export async function analyzeJobAndGenerateResume(
   jobDescription: string,
   candidate: CandidateProfileData
 ): Promise<JobAnalysisResult> {
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
-    generationConfig: {
-      responseMimeType: "application/json",
-      temperature: 0.2,
-    },
-  });
-
   const prompt = `
 You are the CareerForge AI intelligence engine — a senior career advisor and resume specialist.
 
@@ -234,8 +265,10 @@ Return a JSON object with EXACTLY this structure:
 }
 `;
 
-  const response = await model.generateContent(prompt);
-  const text = response.response.text();
+  const text = await generateWithFallback(prompt, {
+    responseMimeType: "application/json",
+    temperature: 0.2,
+  });
   const parsed = JSON.parse(text) as JobAnalysisResult;
   return parsed;
 }
