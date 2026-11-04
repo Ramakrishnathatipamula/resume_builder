@@ -3,102 +3,127 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
-import { analyzeJobAndGenerateResume, CandidateProfileData } from "../services/ai";
+import {
+  analyzeJobMatchOnly,
+  generateTailoredResumeOnly,
+  analyzeJobAndGenerateResume,
+  CandidateProfileData,
+  JobMatchAnalysis,
+  TailoredResumeResult,
+} from "../services/ai";
 
-export async function processJobAndGenerateResume(
-  jobDescriptionText: string,
-  templateId?: string
-) {
-  if (!jobDescriptionText || jobDescriptionText.trim().length < 20) {
-    return {
-      success: false,
-      error: "Please provide a valid job description with at least 20 characters.",
-    };
-  }
+// ─── HELPER: EXTRACT FULL VERIFIED CANDIDATE PROFILE DATA ────────────────────
+async function getFullCandidateData(userId: string, sessionUser: any): Promise<{ profile: any; candidateData: CandidateProfileData }> {
+  let profile = await db.profile.findUnique({
+    where: { userId },
+    include: {
+      educations: true,
+      experiences: true,
+      projects: true,
+      skills: true,
+      certifications: true, // Included!
+    },
+  });
 
-  // 1. Authenticate user
-  const headerList = await headers();
-  const session = await auth.api.getSession({ headers: headerList });
-
-  if (!session?.user) {
-    return { success: false, error: "You must be signed in to generate a resume." };
-  }
-
-  const userId = session.user.id;
-
-  try {
-    // 2. Fetch full user profile with all relations
-    let profile = await db.profile.findUnique({
-      where: { userId },
+  if (!profile) {
+    profile = await db.profile.create({
+      data: {
+        userId,
+        fullName: sessionUser.name,
+        email: sessionUser.email,
+      },
       include: {
         educations: true,
         experiences: true,
         projects: true,
         skills: true,
+        certifications: true,
       },
     });
+  }
 
-    if (!profile) {
-      profile = await db.profile.create({
-        data: {
-          userId,
-          fullName: session.user.name,
-          email: session.user.email,
-        },
-        include: {
-          educations: true,
-          experiences: true,
-          projects: true,
-          skills: true,
-        },
-      });
-    }
+  const candidateData: CandidateProfileData = {
+    name: profile.fullName || sessionUser.name,
+    headline: profile.headline,
+    summary: profile.summary,
+    contact: {
+      email: profile.email || sessionUser.email,
+      phone: profile.phone,
+      countryCode: profile.countryCode || "+91",
+      location: profile.location,
+      websiteUrl: profile.websiteUrl,
+      githubUrl: profile.githubUrl,
+      linkedinUrl: profile.linkedinUrl,
+    },
+    skills: profile.skills
+      .filter((s) => s.category === "TECHNICAL" || s.category === "TOOL" || s.category === "LANGUAGE")
+      .map((s) => s.name),
+    softSkills: profile.skills
+      .filter((s) => s.category === "SOFT")
+      .map((s) => s.name),
+    experiences: profile.experiences.map((e) => ({
+      company: e.company,
+      title: e.title,
+      employmentType: e.employmentType || "Full-Time",
+      location: e.location || undefined,
+      startDate: e.startDate.toISOString().split("T")[0],
+      endDate: e.endDate ? e.endDate.toISOString().split("T")[0] : undefined,
+      isCurrent: e.isCurrent,
+      bullets: e.bullets,
+      technologies: e.technologies,
+    })),
+    projects: profile.projects.map((p) => ({
+      name: p.name,
+      role: p.role || undefined,
+      description: p.description,
+      demoUrl: p.demoUrl || undefined,
+      repoUrl: p.repoUrl || undefined,
+      bullets: p.bullets,
+      technologies: p.technologies,
+    })),
+    educations: profile.educations.map((ed) => ({
+      institution: ed.institution,
+      degree: ed.degree,
+      fieldOfStudy: ed.fieldOfStudy,
+      level: ed.level || undefined,
+      startDate: ed.startDate.toISOString().split("T")[0],
+      endDate: ed.endDate ? ed.endDate.toISOString().split("T")[0] : undefined,
+      gpa: ed.gpa || undefined,
+      gpaScale: ed.gpaScale || undefined,
+    })),
+    certifications: profile.certifications.map((c) => ({
+      name: c.name,
+      issuer: c.issuer,
+      issueDate: c.issueDate.toISOString().split("T")[0],
+      credentialId: c.credentialId || undefined,
+      url: c.url || undefined,
+    })),
+  };
 
-    // 3. Build enriched candidate data (Phase 4: soft skills, employment type, dates)
-    const candidateData: CandidateProfileData = {
-      name: profile.fullName || session.user.name,
-      headline: profile.headline,
-      summary: profile.summary,
-      skills: profile.skills
-        .filter((s) => s.category === "TECHNICAL" || s.category === "TOOL" || s.category === "LANGUAGE")
-        .map((s) => s.name),
-      softSkills: profile.skills
-        .filter((s) => s.category === "SOFT")
-        .map((s) => s.name),
-      experiences: profile.experiences.map((e) => ({
-        company: e.company,
-        title: e.title,
-        employmentType: e.employmentType || "Full-Time",
-        startDate: e.startDate.toISOString().split("T")[0],
-        endDate: e.endDate ? e.endDate.toISOString().split("T")[0] : undefined,
-        isCurrent: e.isCurrent,
-        bullets: e.bullets,
-        technologies: e.technologies,
-      })),
-      projects: profile.projects.map((p) => ({
-        name: p.name,
-        description: p.description,
-        bullets: p.bullets,
-        technologies: p.technologies,
-      })),
-      educations: profile.educations.map((ed) => ({
-        institution: ed.institution,
-        degree: ed.degree,
-        fieldOfStudy: ed.fieldOfStudy,
-        level: ed.level || undefined,
-        gpa: ed.gpa || undefined,
-        gpaScale: ed.gpaScale || undefined,
-      })),
-    };
+  return { profile, candidateData };
+}
 
-    // 4. Run AI Analysis & Resume Tailoring for Selected Template
-    const analysis = await analyzeJobAndGenerateResume(
-      jobDescriptionText,
-      candidateData,
-      templateId
-    );
+// ─── STEP 1: ANALYZE JOB DESCRIPTION & MATCH SKILLS ONLY ─────────────────────
+export async function analyzeJobMatchAction(jobDescriptionText: string) {
+  if (!jobDescriptionText || jobDescriptionText.trim().length < 20) {
+    return { success: false, error: "Please provide a valid job description with at least 20 characters." };
+  }
 
-    // 5. Save Job Description to Neon DB
+  const headerList = await headers();
+  const session = await auth.api.getSession({ headers: headerList });
+  if (!session?.user) {
+    return { success: false, error: "You must be signed in to analyze a job." };
+  }
+
+  const userId = session.user.id;
+
+  try {
+    const { profile, candidateData } = await getFullCandidateData(userId, session.user);
+
+    // 1. Run AI Match Analysis (Skills, Education, Experience, Roadmap)
+    const analysis = await analyzeJobMatchOnly(jobDescriptionText, candidateData);
+
+    // 2. Save Job Description to Neon DB
     const savedJob = await db.jobDescription.create({
       data: {
         userId,
@@ -111,7 +136,7 @@ export async function processJobAndGenerateResume(
       },
     });
 
-    // 6. Save Match Result with ALL Phase 4 fields
+    // 3. Save Match Result to Neon DB
     const matchResult = await db.matchResult.create({
       data: {
         userId,
@@ -130,7 +155,7 @@ export async function processJobAndGenerateResume(
       },
     });
 
-    // 7. Save Learning Roadmap
+    // 4. Save Learning Roadmap items
     if (analysis.roadmap && analysis.roadmap.length > 0) {
       await db.learningRoadmap.createMany({
         data: analysis.roadmap.map((item) => ({
@@ -145,23 +170,71 @@ export async function processJobAndGenerateResume(
       });
     }
 
-    // 8. Save Generated Resume to Neon DB with Chosen Template
+    return {
+      success: true,
+      data: {
+        jobId: savedJob.id,
+        matchResultId: matchResult.id,
+        analysis,
+      },
+    };
+  } catch (error: any) {
+    console.error("Error analyzing job match:", error);
+    return {
+      success: false,
+      error: error?.message || "Failed to analyze job match.",
+    };
+  }
+}
+
+// ─── STEP 2: GENERATE TAILORED RESUME FOR CHOSEN TEMPLATE ────────────────────
+export async function generateResumeAction(
+  jobId: string,
+  matchResultId: string,
+  templateId: string,
+  customLatexSnippet?: string
+) {
+  const headerList = await headers();
+  const session = await auth.api.getSession({ headers: headerList });
+  if (!session?.user) {
+    return { success: false, error: "You must be signed in." };
+  }
+
+  const userId = session.user.id;
+
+  try {
+    const job = await db.jobDescription.findFirst({
+      where: { id: jobId, userId },
+    });
+    if (!job) return { success: false, error: "Job description not found." };
+
+    const { candidateData } = await getFullCandidateData(userId, session.user);
+
+    // Generate Tailored Resume with Chosen Template & JD Keywords
+    const tailoredResume = await generateTailoredResumeOnly(
+      job.rawText,
+      candidateData,
+      templateId,
+      customLatexSnippet
+    );
+
+    // Save to Neon DB
     const savedResume = await db.resume.create({
       data: {
         userId,
-        jobId: savedJob.id,
-        matchResultId: matchResult.id,
-        title: `${analysis.jobTitle} - ${analysis.company}`,
-        targetRole: analysis.jobTitle,
+        jobId: job.id,
+        matchResultId,
+        title: `${tailoredResume.title} - ${job.company}`,
+        targetRole: tailoredResume.targetRole,
         templateName: templateId || "jakes-tech",
-        contentJson: analysis.tailoredResume as any,
-        latexSource: analysis.tailoredResume.latexSource,
+        contentJson: tailoredResume as any,
+        latexSource: tailoredResume.latexSource,
         versions: {
           create: {
             versionNum: 1,
-            contentJson: analysis.tailoredResume as any,
-            latexSource: analysis.tailoredResume.latexSource,
-            note: `Initial generation using ${templateId || "jakes-tech"} template`,
+            contentJson: tailoredResume as any,
+            latexSource: tailoredResume.latexSource,
+            note: `Generated with template ${templateId}`,
           },
         },
       },
@@ -170,17 +243,46 @@ export async function processJobAndGenerateResume(
     return {
       success: true,
       data: {
-        jobId: savedJob.id,
         resumeId: savedResume.id,
-        templateId: templateId || "jakes-tech",
-        analysis,
+        tailoredResume,
       },
     };
   } catch (error: any) {
-    console.error("Error processing job description:", error);
+    console.error("Error generating resume:", error);
     return {
       success: false,
-      error: error?.message || "Failed to process job description and generate resume.",
+      error: error?.message || "Failed to generate tailored resume.",
     };
   }
+}
+
+// ─── ALL-IN-ONE PIPELINE (BACKWARDS COMPATIBLE) ──────────────────────────────
+export async function processJobAndGenerateResume(
+  jobDescriptionText: string,
+  templateId?: string
+) {
+  const matchRes = await analyzeJobMatchAction(jobDescriptionText);
+  if (!matchRes.success || !matchRes.data) {
+    return matchRes;
+  }
+
+  const { jobId, matchResultId, analysis } = matchRes.data;
+  const resumeRes = await generateResumeAction(jobId, matchResultId, templateId || "jakes-tech");
+
+  if (!resumeRes.success || !resumeRes.data) {
+    return resumeRes;
+  }
+
+  return {
+    success: true,
+    data: {
+      jobId,
+      resumeId: resumeRes.data.resumeId,
+      templateId: templateId || "jakes-tech",
+      analysis: {
+        ...analysis,
+        tailoredResume: resumeRes.data.tailoredResume,
+      },
+    },
+  };
 }

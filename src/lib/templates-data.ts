@@ -104,7 +104,34 @@ Include a 'Publications & Research' or 'Patents & Preprints' section if relevant
   },
 ];
 
-export function getTemplateById(id?: string): ResumeTemplate {
-  const found = RESUME_TEMPLATES.find((t) => t.id === id);
+export function getStoredCustomTemplates(): ResumeTemplate[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem("careerforge_custom_templates");
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveCustomTemplate(template: ResumeTemplate): void {
+  if (typeof window === "undefined") return;
+  const existing = getStoredCustomTemplates();
+  const filtered = existing.filter((t) => t.id !== template.id);
+  filtered.unshift(template);
+  localStorage.setItem("careerforge_custom_templates", JSON.stringify(filtered));
+}
+
+export function deleteCustomTemplate(id: string): void {
+  if (typeof window === "undefined") return;
+  const existing = getStoredCustomTemplates();
+  const filtered = existing.filter((t) => t.id !== id);
+  localStorage.setItem("careerforge_custom_templates", JSON.stringify(filtered));
+}
+
+export function getTemplateById(id?: string, customList: ResumeTemplate[] = []): ResumeTemplate {
+  const all = [...customList, ...RESUME_TEMPLATES];
+  const found = all.find((t) => t.id === id);
   return found || RESUME_TEMPLATES[0];
 }
+
