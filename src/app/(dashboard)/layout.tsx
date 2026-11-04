@@ -12,7 +12,6 @@ import {
   Sparkles,
   Loader2,
   FileText,
-  FileSearch,
 } from "lucide-react";
 
 export default function DashboardLayout({
@@ -31,7 +30,6 @@ export default function DashboardLayout({
 
   const navItems = [
     { name: "Career Profile", href: "/dashboard/profile", icon: User },
-    { name: "Job Intelligence", href: "/dashboard/jobs", icon: FileSearch },
     { name: "Resume Templates", href: "/dashboard/templates", icon: LayoutTemplate },
     { name: "History of Generated Resumes", href: "/dashboard/history", icon: History },
     { name: "Interview Preparation", href: "/dashboard/interview", icon: Video },

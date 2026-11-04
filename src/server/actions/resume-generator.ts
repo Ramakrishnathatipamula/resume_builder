@@ -15,21 +15,16 @@ export async function processJobAndGenerateResume(jobDescriptionText: string) {
 
   // 1. Authenticate user
   const headerList = await headers();
-  const session = await auth.api.getSession({
-    headers: headerList,
-  });
+  const session = await auth.api.getSession({ headers: headerList });
 
   if (!session?.user) {
-    return {
-      success: false,
-      error: "You must be signed in to generate a resume.",
-    };
+    return { success: false, error: "You must be signed in to generate a resume." };
   }
 
   const userId = session.user.id;
 
   try {
-    // 2. Fetch User Profile
+    // 2. Fetch full user profile with all relations
     let profile = await db.profile.findUnique({
       where: { userId },
       include: {
@@ -56,14 +51,24 @@ export async function processJobAndGenerateResume(jobDescriptionText: string) {
       });
     }
 
+    // 3. Build enriched candidate data (Phase 4: soft skills, employment type, dates)
     const candidateData: CandidateProfileData = {
       name: profile.fullName || session.user.name,
       headline: profile.headline,
       summary: profile.summary,
-      skills: profile.skills.map((s) => s.name),
+      skills: profile.skills
+        .filter((s) => s.category === "TECHNICAL" || s.category === "TOOL" || s.category === "LANGUAGE")
+        .map((s) => s.name),
+      softSkills: profile.skills
+        .filter((s) => s.category === "SOFT")
+        .map((s) => s.name),
       experiences: profile.experiences.map((e) => ({
         company: e.company,
         title: e.title,
+        employmentType: e.employmentType || "Full-Time",
+        startDate: e.startDate.toISOString().split("T")[0],
+        endDate: e.endDate ? e.endDate.toISOString().split("T")[0] : undefined,
+        isCurrent: e.isCurrent,
         bullets: e.bullets,
         technologies: e.technologies,
       })),
@@ -77,13 +82,16 @@ export async function processJobAndGenerateResume(jobDescriptionText: string) {
         institution: ed.institution,
         degree: ed.degree,
         fieldOfStudy: ed.fieldOfStudy,
+        level: ed.level || undefined,
+        gpa: ed.gpa || undefined,
+        gpaScale: ed.gpaScale || undefined,
       })),
     };
 
-    // 3. Run AI Analysis & Resume Tailoring
+    // 4. Run AI Analysis & Resume Tailoring
     const analysis = await analyzeJobAndGenerateResume(jobDescriptionText, candidateData);
 
-    // 4. Save Job Description to Neon DB
+    // 5. Save Job Description to Neon DB
     const savedJob = await db.jobDescription.create({
       data: {
         userId,
@@ -91,11 +99,12 @@ export async function processJobAndGenerateResume(jobDescriptionText: string) {
         company: analysis.company || "Company",
         rawText: jobDescriptionText,
         requiredSkills: analysis.extractedSkills,
+        preferredSkills: analysis.softSkillsRequired || [],
         keywords: analysis.extractedSkills,
       },
     });
 
-    // 5. Save Match Result to Neon DB
+    // 6. Save Match Result with ALL Phase 4 fields
     const matchResult = await db.matchResult.create({
       data: {
         userId,
@@ -104,11 +113,17 @@ export async function processJobAndGenerateResume(jobDescriptionText: string) {
         overallScore: Math.round(analysis.matchScore),
         matchedSkills: analysis.matchedSkills,
         missingSkills: analysis.missingSkills,
+        partialMatches: analysis.partialMatches || [],
+        softSkillsMatched: analysis.softSkillsMatched || [],
+        softSkillsMissing: analysis.softSkillsMissing || [],
+        scoreBreakdown: analysis.scoreBreakdown as any,
+        educationMatch: analysis.educationMatch as any,
+        experienceMatch: analysis.experienceMatch as any,
         scoreExplanation: analysis.scoreExplanation,
       },
     });
 
-    // 6. Save Learning Roadmap items
+    // 7. Save Learning Roadmap
     if (analysis.roadmap && analysis.roadmap.length > 0) {
       await db.learningRoadmap.createMany({
         data: analysis.roadmap.map((item) => ({
@@ -123,7 +138,7 @@ export async function processJobAndGenerateResume(jobDescriptionText: string) {
       });
     }
 
-    // 7. Save Generated Resume to Neon DB
+    // 8. Save Generated Resume to Neon DB
     const savedResume = await db.resume.create({
       data: {
         userId,

@@ -224,21 +224,27 @@ model JobDescription {
 }
 
 model MatchResult {
-  id               String         @id @default(cuid())
-  userId           String
-  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  profileId        String
-  profile          Profile        @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  jobId            String
-  job              JobDescription @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  overallScore     Int
-  matchedSkills    String[]       @default([])
-  missingSkills    String[]       @default([])
-  partialMatches   String[]       @default([])
-  scoreExplanation String
-  createdAt        DateTime       @default(now())
+  id                 String         @id @default(cuid())
+  userId             String
+  user               User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profileId          String
+  profile            Profile        @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  jobId              String
+  job                JobDescription @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  overallScore       Int
+  matchedSkills      String[]       @default([])
+  missingSkills      String[]       @default([])
+  partialMatches     String[]       @default([])
+  softSkillsMatched  String[]       @default([])
+  softSkillsMissing  String[]       @default([])
+  scoreBreakdown     Json?          // { technical: Int, experience: Int, education: Int, projects: Int }
+  educationMatch     Json?          // { required: String, candidate: String, matched: Boolean, note: String }
+  experienceMatch    Json?          // { required: String, candidate: String, sufficient: Boolean, note: String }
+  scoreExplanation   String
 
-  resumes          Resume[]
+  createdAt          DateTime       @default(now())
+
+  resumes            Resume[]
 
   @@index([userId])
   @@index([jobId])
