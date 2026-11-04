@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { useSession } from "@/lib/auth-client";
 import {
   analyzeJobMatchAction,
   generateResumeAction,
@@ -144,6 +146,7 @@ function CategoryBar({
 
 export default function DashboardPage() {
   const searchParams = useSearchParams();
+  const { data: session } = useSession();
   const [jobDescription, setJobDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -157,11 +160,12 @@ export default function DashboardPage() {
   const [generatingResume, setGeneratingResume] = useState(false);
   const [tailoredResume, setTailoredResume] = useState<TailoredResumeResult | null>(null);
   const [copied, setCopied] = useState(false);
+  const [resumeViewMode, setResumeViewMode] = useState<"visual" | "latex">("visual");
 
   // Template State
   const [customTemplates, setCustomTemplates] = useState<ResumeTemplate[]>([]);
-  const [selectedTemplateId, setSelectedTemplateId] = useState("jakes-tech");
-  const [currentResumeTemplateId, setCurrentResumeTemplateId] = useState("jakes-tech");
+  const [selectedTemplateId, setSelectedTemplateId] = useState("my-template-1");
+  const [currentResumeTemplateId, setCurrentResumeTemplateId] = useState("my-template-1");
   const [showTemplateModal, setShowTemplateModal] = useState(false);
 
   const [activeResultTab, setActiveResultTab] = useState<
@@ -225,7 +229,7 @@ export default function DashboardPage() {
 
     const all = [...customTemplates, ...RESUME_TEMPLATES];
     const tmplObj = all.find((t) => t.id === templateId);
-    const customSnippet = tmplObj?.id.startsWith("custom-") ? tmplObj.latexGuidelines : undefined;
+    const customSnippet = tmplObj?.latexGuidelines;
 
     try {
       const res = await generateResumeAction(
@@ -786,14 +790,44 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setShowTemplateModal(true)}
-                  className="px-3.5 py-1.5 rounded-xl bg-gray-950 hover:bg-gray-800 border border-gray-800 text-xs font-semibold text-indigo-300 hover:text-white flex items-center gap-1.5 transition self-start md:self-auto cursor-pointer"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Switch Template</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  {/* View Mode Toggle: Visual vs LaTeX Source */}
+                  <div className="flex items-center rounded-xl bg-gray-950 p-1 border border-gray-800">
+                    <button
+                      type="button"
+                      onClick={() => setResumeViewMode("visual")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+                        resumeViewMode === "visual"
+                          ? "bg-indigo-600 text-white shadow"
+                          : "text-gray-400 hover:text-white"
+                      }`}
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>Visual Preview</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setResumeViewMode("latex")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+                        resumeViewMode === "latex"
+                          ? "bg-indigo-600 text-white shadow"
+                          : "text-gray-400 hover:text-white"
+                      }`}
+                    >
+                      <Code2 className="w-3.5 h-3.5" />
+                      <span>LaTeX (.tex)</span>
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowTemplateModal(true)}
+                    className="px-3.5 py-1.5 rounded-xl bg-gray-950 hover:bg-gray-800 border border-gray-800 text-xs font-semibold text-indigo-300 hover:text-white flex items-center gap-1.5 transition self-start md:self-auto cursor-pointer"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Switch Template</span>
+                  </button>
+                </div>
               </div>
 
               {/* Action Buttons: Overleaf + Print PDF + .tex + Copy */}
@@ -840,177 +874,217 @@ export default function DashboardPage() {
                 </button>
               </div>
 
-              {/* Printable & Screen Resume Preview */}
-              <div
-                id="careerforge-resume-document"
-                className="p-8 rounded-2xl bg-gray-950 border border-gray-800 space-y-6 text-gray-200 shadow-2xl print:bg-white print:text-black print:p-0 print:border-0"
-              >
-                {/* 1. Complete Contact Header */}
-                <div className="border-b border-gray-800 print:border-black pb-4 text-center sm:text-left">
-                  <h2 className="text-2xl font-black text-white print:text-black">
-                    {tailoredResume.contact?.name || tailoredResume.title}
-                  </h2>
-                  <p className="text-xs text-indigo-400 print:text-gray-700 font-bold mt-0.5 uppercase tracking-wider">
-                    {tailoredResume.targetRole}
-                  </p>
-
-                  <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400 print:text-gray-700 mt-2">
-                    {tailoredResume.contact?.email && (
-                      <span className="flex items-center gap-1">
-                        <Mail className="w-3 h-3 text-gray-500" />
-                        {tailoredResume.contact.email}
-                      </span>
-                    )}
-                    {tailoredResume.contact?.phone && (
-                      <span className="flex items-center gap-1">
-                        <Phone className="w-3 h-3 text-gray-500" />
-                        {tailoredResume.contact.phone}
-                      </span>
-                    )}
-                    {tailoredResume.contact?.location && (
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-3 h-3 text-gray-500" />
-                        {tailoredResume.contact.location}
-                      </span>
-                    )}
-                    {tailoredResume.contact?.linkedin && (
-                      <span className="flex items-center gap-1 text-indigo-400 print:text-black">
-                        <Linkedin className="w-3 h-3" />
-                        {tailoredResume.contact.linkedin}
-                      </span>
-                    )}
-                    {tailoredResume.contact?.github && (
-                      <span className="flex items-center gap-1 text-indigo-400 print:text-black">
-                        <Github className="w-3 h-3" />
-                        {tailoredResume.contact.github}
-                      </span>
-                    )}
+              {/* VIEW 1: RAW LATEX SOURCE CODE */}
+              {resumeViewMode === "latex" ? (
+                <div className="rounded-2xl bg-gray-950 border border-gray-800 overflow-hidden shadow-2xl">
+                  <div className="flex items-center justify-between px-4 py-3 bg-gray-900/90 border-b border-gray-800">
+                    <span className="text-xs font-mono text-gray-300 flex items-center gap-2">
+                      <Code2 className="w-4 h-4 text-indigo-400" />
+                      {activeTemplate.name} — Standalone LaTeX Source (.tex)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleCopyLatex}
+                      className="px-3 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs text-gray-200 flex items-center gap-1.5 transition cursor-pointer"
+                    >
+                      {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copied ? "Copied" : "Copy Code"}</span>
+                    </button>
                   </div>
-
-                  <p className="text-xs text-gray-300 print:text-gray-800 mt-3 leading-relaxed">
-                    {tailoredResume.summary}
-                  </p>
+                  <pre className="p-6 text-xs text-emerald-300 font-mono whitespace-pre-wrap overflow-x-auto max-h-[700px] overflow-y-auto leading-relaxed select-all">
+                    {tailoredResume.latexSource}
+                  </pre>
                 </div>
+              ) : (
+                /* VIEW 2: PRINTABLE & SCREEN RESUME PREVIEW */
+                <div
+                  id="careerforge-resume-document"
+                  className="p-8 rounded-2xl bg-gray-950 border border-gray-800 space-y-6 text-gray-200 shadow-2xl print:bg-white print:text-black print:p-0 print:border-0"
+                >
+                  {/* 1. Complete Contact Header */}
+                  <div className="border-b border-gray-800 print:border-black pb-4 text-center sm:text-left">
+                    <h2 className="text-2xl font-black text-white print:text-black">
+                      {tailoredResume.contact?.name || session?.user?.name || "Candidate"}
+                    </h2>
+                    <p className="text-xs text-indigo-400 print:text-gray-700 font-bold mt-0.5 uppercase tracking-wider">
+                      {tailoredResume.targetRole || "Software Engineer"}
+                    </p>
 
-                {/* 2. Education Section */}
-                {tailoredResume.educations && tailoredResume.educations.length > 0 && (
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 print:text-black mb-2 flex items-center gap-1.5">
-                      <GraduationCap className="w-3.5 h-3.5 text-indigo-400 print:text-black" />
-                      Education
-                    </h3>
-                    <div className="space-y-2">
-                      {tailoredResume.educations.map((edu, idx) => (
-                        <div key={idx} className="flex justify-between items-start text-xs">
-                          <div>
-                            <strong className="text-white print:text-black font-bold block">{edu.institution}</strong>
-                            <span className="text-gray-300 print:text-gray-800">{edu.degree}</span>
-                            {edu.gpa && (
-                              <span className="ml-2 text-indigo-400 print:text-black font-semibold">• GPA: {edu.gpa}</span>
-                            )}
-                          </div>
-                          {edu.dates && <span className="text-gray-400 print:text-gray-600 font-mono text-[11px]">{edu.dates}</span>}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* 3. Technical Skills */}
-                {tailoredResume.skills && tailoredResume.skills.length > 0 && (
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 print:text-black mb-2 flex items-center gap-1.5">
-                      <Code2 className="w-3.5 h-3.5 text-indigo-400 print:text-black" />
-                      Technical Skills (Keyword-Optimized)
-                    </h3>
-                    <div className="flex flex-wrap gap-1.5">
-                      {tailoredResume.skills.map((s) => (
-                        <span
-                          key={s}
-                          className="px-2 py-0.5 rounded bg-gray-900 print:bg-gray-100 print:text-black border border-gray-800 print:border-gray-300 text-xs text-gray-300"
-                        >
-                          {s}
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400 print:text-gray-700 mt-2">
+                      {(tailoredResume.contact?.email || session?.user?.email) && (
+                        <span className="flex items-center gap-1">
+                          <Mail className="w-3 h-3 text-gray-500" />
+                          {tailoredResume.contact?.email || session?.user?.email}
                         </span>
-                      ))}
+                      )}
+                      {tailoredResume.contact?.phone && (
+                        <span className="flex items-center gap-1">
+                          <Phone className="w-3 h-3 text-gray-500" />
+                          {tailoredResume.contact.phone}
+                        </span>
+                      )}
+                      {tailoredResume.contact?.location && (
+                        <span className="flex items-center gap-1">
+                          <MapPin className="w-3 h-3 text-gray-500" />
+                          {tailoredResume.contact.location}
+                        </span>
+                      )}
+                      {tailoredResume.contact?.linkedin && (
+                        <span className="flex items-center gap-1 text-indigo-400 print:text-black">
+                          <Linkedin className="w-3 h-3" />
+                          {tailoredResume.contact.linkedin}
+                        </span>
+                      )}
+                      {tailoredResume.contact?.github && (
+                        <span className="flex items-center gap-1 text-indigo-400 print:text-black">
+                          <Github className="w-3 h-3" />
+                          {tailoredResume.contact.github}
+                        </span>
+                      )}
                     </div>
-                  </div>
-                )}
 
-                {/* 4. Work Experience */}
-                {tailoredResume.experiences && tailoredResume.experiences.length > 0 && (
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 print:text-black mb-3 flex items-center gap-1.5">
-                      <Briefcase className="w-3.5 h-3.5 text-indigo-400 print:text-black" />
-                      Work Experience
-                    </h3>
-                    <div className="space-y-4">
-                      {tailoredResume.experiences.map((exp, i) => (
-                        <div key={i} className="space-y-1">
-                          <div className="flex justify-between items-center text-xs flex-wrap">
-                            <div className="flex items-center gap-2">
-                              <strong className="text-white print:text-black font-bold">{exp.title}</strong>
-                              <span className="text-gray-400 print:text-gray-600 font-medium">@ {exp.company}</span>
-                              {exp.employmentType && (
-                                <span className="text-[10px] px-1.5 py-0.2 rounded bg-gray-900 print:border text-gray-400">
-                                  {exp.employmentType}
-                                </span>
+                    <p className="text-xs text-gray-300 print:text-gray-800 mt-3 leading-relaxed">
+                      {tailoredResume.summary}
+                    </p>
+                  </div>
+
+                  {/* 2. Education Section */}
+                  {tailoredResume.educations && tailoredResume.educations.length > 0 && (
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 print:text-black mb-2 flex items-center gap-1.5">
+                        <GraduationCap className="w-3.5 h-3.5 text-indigo-400 print:text-black" />
+                        Education
+                      </h3>
+                      <div className="space-y-2">
+                        {tailoredResume.educations.map((edu, idx) => (
+                          <div key={idx} className="flex justify-between items-start text-xs">
+                            <div>
+                              <strong className="text-white print:text-black font-bold block">{edu.institution}</strong>
+                              <span className="text-gray-300 print:text-gray-800">{edu.degree}</span>
+                              {edu.gpa && (
+                                <span className="ml-2 text-indigo-400 print:text-black font-semibold">• GPA: {edu.gpa}</span>
                               )}
                             </div>
-                            <span className="text-gray-400 print:text-gray-600 font-mono text-[11px]">
-                              {exp.dates} {exp.location && `• ${exp.location}`}
-                            </span>
+                            {edu.dates && <span className="text-gray-400 print:text-gray-600 font-mono text-[11px]">{edu.dates}</span>}
                           </div>
-                          <ul className="list-disc pl-4 space-y-1 text-xs text-gray-300 print:text-gray-800">
-                            {exp.bullets.map((b, bi) => <li key={bi}>{b}</li>)}
-                          </ul>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* 5. Projects */}
-                {tailoredResume.projects && tailoredResume.projects.length > 0 && (
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 print:text-black mb-3 flex items-center gap-1.5">
-                      <FolderOpen className="w-3.5 h-3.5 text-indigo-400 print:text-black" />
-                      Projects
-                    </h3>
-                    <div className="space-y-4">
-                      {tailoredResume.projects.map((proj, i) => (
-                        <div key={i} className="space-y-1">
-                          <div className="flex justify-between items-center text-xs">
-                            <strong className="text-white print:text-black font-bold">{proj.name}</strong>
-                            <span className="text-gray-400 print:text-gray-600 text-[11px] font-mono">
-                              {proj.technologies?.join(", ")}
-                            </span>
+                  {/* 3. Certifications Section */}
+                  {tailoredResume.certifications && tailoredResume.certifications.length > 0 && (
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 print:text-black mb-2 flex items-center gap-1.5">
+                        <Award className="w-3.5 h-3.5 text-indigo-400 print:text-black" />
+                        Certifications & Credentials
+                      </h3>
+                      <div className="flex flex-wrap gap-3">
+                        {tailoredResume.certifications.map((c, ci) => (
+                          <div key={ci} className="text-xs text-gray-300 print:text-gray-800 p-2.5 rounded-lg bg-gray-900 border border-gray-800">
+                            <strong className="text-white print:text-black">{c.name}</strong>
+                            <div className="text-[11px] text-gray-400 mt-0.5">Issuer: {c.issuer} {c.date ? `(${c.date})` : ""}</div>
                           </div>
-                          <ul className="list-disc pl-4 space-y-1 text-xs text-gray-300 print:text-gray-800">
-                            {proj.bullets.map((b, bi) => <li key={bi}>{b}</li>)}
-                          </ul>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* 6. Certifications */}
-                {tailoredResume.certifications && tailoredResume.certifications.length > 0 && (
-                  <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 print:text-black mb-2 flex items-center gap-1.5">
-                      <Award className="w-3.5 h-3.5 text-indigo-400 print:text-black" />
-                      Certifications & Credentials
-                    </h3>
-                    <div className="flex flex-wrap gap-3">
-                      {tailoredResume.certifications.map((c, ci) => (
-                        <div key={ci} className="text-xs text-gray-300 print:text-gray-800">
-                          <strong className="text-white print:text-black">{c.name}</strong> — {c.issuer} ({c.date})
-                        </div>
-                      ))}
+                  {/* 4. Technical Skills */}
+                  {tailoredResume.skills && tailoredResume.skills.length > 0 && (
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 print:text-black mb-2 flex items-center gap-1.5">
+                        <Code2 className="w-3.5 h-3.5 text-indigo-400 print:text-black" />
+                        Technical Skills (Keyword-Optimized)
+                      </h3>
+                      <div className="flex flex-wrap gap-1.5">
+                        {tailoredResume.skills.map((s) => (
+                          <span
+                            key={s}
+                            className="px-2 py-0.5 rounded bg-gray-900 print:bg-gray-100 print:text-black border border-gray-800 print:border-gray-300 text-xs text-gray-300"
+                          >
+                            {s}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+
+                  {/* 5. Work Experience */}
+                  {tailoredResume.experiences && tailoredResume.experiences.length > 0 && (
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 print:text-black mb-3 flex items-center gap-1.5">
+                        <Briefcase className="w-3.5 h-3.5 text-indigo-400 print:text-black" />
+                        Work Experience
+                      </h3>
+                      <div className="space-y-4">
+                        {tailoredResume.experiences.map((exp, i) => (
+                          <div key={i} className="space-y-1">
+                            <div className="flex justify-between items-center text-xs flex-wrap">
+                              <div className="flex items-center gap-2">
+                                <strong className="text-white print:text-black font-bold">{exp.title}</strong>
+                                <span className="text-gray-400 print:text-gray-600 font-medium">@ {exp.company}</span>
+                                {exp.employmentType && (
+                                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-gray-900 print:border text-gray-400">
+                                    {exp.employmentType}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-gray-400 print:text-gray-600 font-mono text-[11px]">
+                                {exp.dates} {exp.location && `• ${exp.location}`}
+                              </span>
+                            </div>
+                            <ul className="list-disc pl-4 space-y-1 text-xs text-gray-300 print:text-gray-800">
+                              {exp.bullets.map((b, bi) => <li key={bi}>{b}</li>)}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 6. Projects */}
+                  {tailoredResume.projects && tailoredResume.projects.length > 0 && (
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 print:text-black mb-3 flex items-center gap-1.5">
+                        <FolderOpen className="w-3.5 h-3.5 text-indigo-400 print:text-black" />
+                        Projects
+                      </h3>
+                      <div className="space-y-4">
+                        {tailoredResume.projects.map((proj, i) => (
+                          <div key={i} className="space-y-1">
+                            <div className="flex justify-between items-center text-xs">
+                              <strong className="text-white print:text-black font-bold">{proj.name}</strong>
+                              <span className="text-gray-400 print:text-gray-600 text-[11px] font-mono">
+                                {proj.technologies?.join(", ")}
+                              </span>
+                            </div>
+                            <ul className="list-disc pl-4 space-y-1 text-xs text-gray-300 print:text-gray-800">
+                              {proj.bullets.map((b, bi) => <li key={bi}>{b}</li>)}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 7. Helpful Tip for Empty Experiences/Projects */}
+                  {(!tailoredResume.experiences || tailoredResume.experiences.length === 0) && (!tailoredResume.projects || tailoredResume.projects.length === 0) && (
+                    <div className="p-4 rounded-xl bg-indigo-950/20 border border-indigo-800/40 text-xs text-indigo-300 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <Info className="w-4 h-4 text-indigo-400 shrink-0" />
+                        <span>Your resume has been populated with your Education, Certifications, and Skills. Add work experience and projects anytime in Career Profile.</span>
+                      </div>
+                      <Link
+                        href="/dashboard/profile"
+                        className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shrink-0 transition"
+                      >
+                        Edit Profile →
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

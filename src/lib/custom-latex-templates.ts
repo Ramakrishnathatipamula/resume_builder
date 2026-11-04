@@ -316,22 +316,128 @@ export const USER_CUSTOM_TEMPLATES: CustomUserTemplate[] = [
   // ──────────────────────────────────────────────────────────────────────────
   {
     id: "my-template-2",
-    name: "My Custom Template 2",
+    name: "Classic Minimalist (Blue Accent)",
     category: "Tech & Leadership",
-    subtitle: "Distinguished serif typography layout",
+    subtitle: "Distinguished typography layout with subtle blue headers",
     latexCode: String.raw`
-% PASTE YOUR FULL LATEX CODE FOR TEMPLATE 2 BELOW:
-\documentclass[10pt,letterpaper]{article}
-\usepackage[margin=0.6in]{geometry}
-\usepackage{palatino}
-\usepackage{titlesec}
-\usepackage{enumitem}
+\documentclass[a4paper,11pt]{article}
+\usepackage[bottom=0.8in,top=0.8in, left=0.8in,right=0.8in]{geometry}
+
+% non-numbered pages
+\pagestyle{empty} 
+
+%%%%%%%%%%% pdflatex %%%%%%%%%
+\usepackage[T1]{fontenc}
+\usepackage{newtxmath,newtxtext}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%% xelatex %%%%%%%%%%%%%%
+% \usepackage{fontspec}
+% \setmainfont{Times New Roman}
+% \setmainfont{TeX Gyre Termes}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%A Few Useful Packages
+\usepackage{parskip}
+\usepackage{titlesec}	
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage[usenames,dvipsnames]{xcolor}
 \usepackage{hyperref}
+\definecolor{linkcolour}{rgb}{0,0.2,0.6}
+\hypersetup{colorlinks,breaklinks,urlcolor={linkcolour!90}, linkcolor={linkcolour!90}}
 
-\titleformat{\section}{\large\bfseries\scshape}{}{0em}{}[\titlerule]
-\titlespacing*{\section}{0pt}{8pt}{4pt}
+% line spacing
+\linespread{1.1}
 
-% Add your custom macros, packages, and layout commands here...
+% section reformatting
+\titleformat{\section}{\color{black} \large}{}{0em}{}[\color{black}]
+\titlespacing{\section}{0pt}{3pt}{3pt}
+
+\newcommand{\sectitle}[1]{
+    \vspace{1.5ex}
+    \section{#1}
+    \vspace{-3ex}
+    \noindent\rule{\textwidth}{0.7pt}
+    \vspace{-4ex}
+}
+
+% new text bold style
+\newsavebox\CBox
+\def\textBF#1{\sbox\CBox{#1}\resizebox{\wd\CBox}{\ht\CBox}{\textcolor{linkcolour}{{#1}}}}
+\parindent=0pt
+
+% dummy text
+\newcommand{\mylipsum}{Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Ut purus elit,
+vestibulum ut, placerat ac, adipiscing vitae, felis.}
+
+%-------------------- Begin document ----------------------
+\begin{document}
+
+%-------------------- Title section ----------------------
+\begin{minipage}{\textwidth}
+    \vspace{7ex}
+        \par{
+        \centering
+        \vspace{-0.9in}
+            % \textcolor{black}{\emph{Curriculum Vitae}}\\
+            \textcolor{linkcolour}{\Large YOUR NAME}
+        \par}
+\end{minipage}
+
+%-------------------- Header ----------------------
+\begin{center}
+    Address, YY, XX \,$\cdot$\, \href{mailto:email@address.com}{email@address.com} \,$\cdot$\, \href{https://mywebsite.com/}{mywebsite.com}
+\end{center}
+
+%%% Short paragraph
+My brief description.~\mylipsum
+
+%-------------------- SECTIONS ----------------------
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\sectitle{Technical Skills}
+
+\textBF{Programming skills} --- \mylipsum
+
+\textBF{Data Analysis} --- \mylipsum
+
+\textBF{Visualization} --- \mylipsum
+
+\textBF{Git} --- \mylipsum
+
+\textBF{Unix} --- \mylipsum
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\sectitle{Core Competencies}
+
+\textBF{Leadership} --- \mylipsum
+
+\textBF{Problem-solving} --- \mylipsum
+
+\textBF{Communication} --- \mylipsum
+
+\textBF{Writing} --- \mylipsum
+
+\textBF{Languages} --- \mylipsum
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\sectitle{Positions}
+
+\textBF{First Position} --- XYZ Institute \hfill XX 2000 --- Present
+
+\mylipsum
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\sectitle{Education}
+
+\mylipsum
+
+\textBF{Ph.D.} in YYY -- {XYZ University, CT}\hfill {XX 2000 --- YY XXXX} 
+
+\textBF{B.S.} in XXX -- {XYZ University, CT}  \hfill {XX 2000 --- YY XXXX} 
+
+\end{document}
 `,
   },
 
@@ -340,23 +446,247 @@ export const USER_CUSTOM_TEMPLATES: CustomUserTemplate[] = [
   // ──────────────────────────────────────────────────────────────────────────
   {
     id: "my-template-3",
-    name: "My Custom Template 3",
-    category: "Minimalist & Compact",
-    subtitle: "High-density space-saving layout",
+    name: "Executive Navy (Giannetti Style)",
+    category: "Executive & Consulting",
+    subtitle: "Professional navy blue accented layout with tabular skills and project portfolios",
     latexCode: String.raw`
-% PASTE YOUR FULL LATEX CODE FOR TEMPLATE 3 BELOW:
-\documentclass[10pt,a4paper]{article}
-\usepackage[margin=0.45in]{geometry}
-\usepackage[scaled]{helvet}
-\renewcommand\familydefault{\sfdefault}
-\usepackage{titlesec}
-\usepackage{enumitem}
+% This template is designed to offer an aesthetically pleasing resume that adheres to a formal and institutional tone, making it suitable for applications to companies and research centers requiring a high degree of professionalism. Navy blue has been chosen as the primary color to align with these objectives.
+% Self-contained standalone version (compiles directly on Overleaf without requiring external resume.cls).
+% Author: Christian Maria Giannetti
+
+%----------------------------------------------------------------------------------------
+%  Packages And Other Document Configurations
+%----------------------------------------------------------------------------------------
+
+\documentclass[11pt,a4paper]{article}
+
+% Document margins
+\usepackage[left=0.75in,top=0.6in,right=0.75in,bottom=0.6in]{geometry}
+
+% Color and hyperlink packages
+\usepackage{xcolor}
 \usepackage{hyperref}
+\usepackage{ifthen}
 
-\titleformat{\section}{\bfseries\normalsize\uppercase}{}{0em}{}[\hrule]
-\titlespacing*{\section}{0pt}{6pt}{3pt}
+% Footnote and margin adjustment packages
+\usepackage{footnote}
+\usepackage{changepage}
 
-% Add your custom macros, packages, and layout commands here...
+% Tabularx package for custom tables
+\usepackage{tabularx}
+
+% Define navyblue color
+\definecolor{navyblue}{RGB}{0,54,123}
+\hypersetup{colorlinks=true, linkcolor=navyblue, urlcolor=navyblue}
+
+% Page style
+\pagestyle{empty}
+
+%----------------------------------------------------------------------------------------
+%   Standalone Resume Macros (No external .cls needed)
+%----------------------------------------------------------------------------------------
+
+% Candidate Name & Personal Info
+\newcommand{\name}[1]{\def\candidatename{#1}}
+\def\candidatename{}
+
+\newcommand{\printPersonalInfo}[1]{%
+  \begin{center}%
+    \ifx\candidatename\empty\else%
+      {\Huge\bfseries \candidatename}\\[4pt]%
+    \fi%
+    \small #1%
+  \end{center}%
+  \vspace{-0.5em}%
+}
+
+\newcommand{\personalInfo}[1]{#1 \\}
+\providecommand{\tag}[1]{\textbf{#1:}\ }
+\newcommand{\info}[1]{#1}
+\newcommand{\infoSeparator}{\quad\vert\quad}
+
+% Define italicitem, bolditem, and plainitem commands
+\newcommand{\italicitem}[1]{\item{\textit{#1}}}
+\newcommand{\bolditem}[1]{\item{\textbf{#1}}}
+\newcommand{\plainitem}[1]{\item{#1}}
+
+% Define user-friendly link command for hyperlinks
+\newcommand{\link}[2]{{\href{#1}{#2}}}
+\newcommand{\entry}[2]{#1 & #2 \tabularnewline}
+
+% Section Environment
+\newenvironment{rSection}[1]{%
+  \vspace{1.2em}%
+  {\color{navyblue}\large\bfseries\MakeUppercase{#1}}%
+  \par\vspace{0.2em}%
+  {\color{navyblue}\hrule height 0.8pt}%
+  \vspace{0.6em}%
+}{%
+  \par\vspace{0.3em}%
+}
+
+% Subsection Environment for Work Experience
+\newenvironment{rSubsection}[4]{%
+  {\bfseries #1} \hfill {#2}%
+  \ifthenelse{\equal{#3}{}}{}{%
+    \\
+    {\textit{#3}} \hfill {\textit{#4}}%
+  }%
+  \smallskip%
+  \begin{list}{$\cdot$}{\setlength{\leftmargin}{1.5em}\setlength{\itemsep}{-0.2em}\setlength{\topsep}{0em}}%
+}{%
+  \end{list}%
+  \vspace{0.3em}%
+}
+
+% Subsection Environment without Bullets (Education, etc.)
+\newenvironment{rSubsectionNoBullet}[4]{%
+  {\bfseries #1} \hfill {#4}%
+  \ifthenelse{\equal{#2}{}}{}{%
+    \\
+    {\textit{#2}} \hfill {\textit{#3}}%
+  }%
+  \smallskip%
+  \begin{list}{}{\setlength{\leftmargin}{1.2em}\setlength{\itemsep}{-0.2em}\setlength{\topsep}{0em}}%
+}{%
+  \end{list}%
+  \vspace{0.3em}%
+}
+
+% Tabularx Environment Section
+\newcommand{\tableEnv}[2]{%
+  \begin{rSection}{#1}%
+    \begin{adjustwidth}{0.0in}{0.1in}%
+      \begin{tabularx}{\linewidth}{@{} >{\bfseries}l @{\hspace{4ex}} X @{}}%
+        #2%
+      \end{tabularx}%
+    \end{adjustwidth}%
+  \end{rSection}%
+}
+
+%----------------------------------------------------------------------------------------
+%   Begin document
+%----------------------------------------------------------------------------------------
+
+\name{\color{navyblue} Carl Johnson (CJ)}
+
+\begin{document}
+
+\printPersonalInfo{
+  \personalInfo{\tag{Residence/domicile}\info{113, Groove Street}}
+  \personalInfo{\tag{E-mail}\info{pleasedonotcontactme@gmail.com} \infoSeparator\tag{Telephone number}\info{+1-202-555-0100}}
+  \personalInfo{\tag{Place of birth}\info{Ariccia, Italy} \infoSeparator\tag{Date of birth}\info{08-11-1968}}
+}
+
+%----------------------------------------------------------------------------------------
+%   Education section
+%----------------------------------------------------------------------------------------
+
+\begin{rSection}{Education}
+
+    % Master's degree entry
+    \begin{rSubsectionNoBullet}{\bf Master's degree in Memeology and Unicorn Analytics}{Faber College}{Master's degree program}{February 2019 - April 2020}
+        \italicitem{Graduated with honors}
+        \italicitem{Thesis title: A deep learning approach to predicting the next Brexit: Unicorns vs. White Walkers}
+    \end{rSubsectionNoBullet}
+    
+    % Bachelor's degree entry
+    \begin{rSubsectionNoBullet}{\bf Bachelor's degree in Absurd Robotics Engineering}{Westeros University}{Bachelor's degree program}{May 2016 - August 2018}
+        \italicitem{Final grade: 9,001/10,000}
+        \italicitem{Capstone project: Design and implementation of a robot that makes toast using a flamethrower}
+    \end{rSubsectionNoBullet}
+    
+    % High School diploma entry
+    \begin{rSubsectionNoBullet}{\bf High School Diploma}{Rydell High School}{High school's diploma program}{June 2011 - May 2015}
+        \italicitem{Final grade: 7/7}
+        \italicitem{Senior project: Applying machine learning techniques to predict students' failure rates based on their meme consumption habits}
+    \end{rSubsectionNoBullet}
+
+\end{rSection}
+
+%----------------------------------------------------------------------------------------
+%   Work experience section
+%----------------------------------------------------------------------------------------
+
+\begin{rSection}{Work experience}
+
+    % First work experience entry
+    \begin{rSubsection}{Dank Memes Inc.}{September 2019 - September 2021}{Head of "Machine Learning for Absurd Stuff" Department}{Ariccia, Italy}
+        \item Developed state-of-the-art predictive models for next-generation memes.
+        \item Applied machine learning techniques to optimize unicorn-mounted laser systems.
+        \item Streamlined internal meme generation pipelines.
+    \end{rSubsection}
+    
+    % Second work experience entry
+    \begin{rSubsection}{Viral News Robotics Laboratory (VNRL)}{March 2019 - July 2019}{Robotics Comedian Intern}{Fries, Virginia}
+        \item Engineered a robotic Tyrion Lannister that repeatedly asks, "Where's the wine?"
+    \end{rSubsection}
+    
+    % Third work experience entry
+    \begin{rSubsection}{Library of Alexandria 2.0}{January 2017 - April 2018}{Novelist}{Cut and Shoot, Texas}
+        \item Curated the "Dumb \& Dumber Guide to Classic Literature", featuring "Fifty Smudges 
+        of Gray", "Pride and Prejudice: smart girls can always find a way to rationalize marrying for money"
+        \item Hosted a weekly meme reading club on "Breadxit": the debate over whether bread should be banned from Europe
+    \end{rSubsection}
+    
+\end{rSection}
+
+%----------------------------------------------------------------------------------------
+%   Extracurricular activities section
+%----------------------------------------------------------------------------------------
+
+\begin{rSection}{Extracurricular activities}
+
+% First extracurricular entry
+\begin{rSubsectionNoBullet}{Procrastinators Anonymous: Machine Learning for Laziness}{November 2015}{Successfully delayed attending the course}{Rome, Italy}
+    \plainitem{Developed an AI that predicts the perfect moment to start binge-watching Dr. House episodes instead of working on important tasks.}
+\end{rSubsectionNoBullet}
+
+% Third extracurricular entry
+\begin{rSubsectionNoBullet}{Dumb Literature Club: Famous Books with Ridiculous Twists}{June 2014 - Present}{Proud Member}{Popejoy, Iowa}
+    \plainitem{Regularly participate in discussions concerning famous literature works, such as "The Great Catsby", which is basically the Great Gatsby, but with cats.}
+\end{rSubsectionNoBullet}
+
+\end{rSection}
+
+%----------------------------------------------------------------------------------------
+% Technical skills section
+%----------------------------------------------------------------------------------------
+
+\tableEnv{Technical skills}{
+    \entry{Programming Languages/Tools}{C, C++, Java, Javascript, Python, Prolog, \LaTeX, PigeonScript (for bird-based memes)}
+}
+
+%----------------------------------------------------------------------------------------
+% Language proficiencies section
+%----------------------------------------------------------------------------------------
+
+\tableEnv{Language proficiencies}{
+    \entry{English}{Fluent in Shakespearean insults}
+    \entry{French}{Proficient in baguette related jokes}
+}
+
+%----------------------------------------------------------------------------------------
+% Most relevant projects section
+%----------------------------------------------------------------------------------------
+
+\tableEnv{Portfolio of most relevant projects}{
+    \entry{Survey}{Analyzing the effects of replacing office chairs with unicycles on employee morale}
+    \entry{Survey}{Investigation of the therapeutic effects of watching cat videos for 8 hours a day}
+    \entry{Paper}{The correlation between sock loss in laundry and the existence of parallel universes}
+    \entry{Article}{The definitive study on the impact of pineapple as a pizza topping on global diplomacy}
+}
+
+%----------------------------------------------------------------------------------------
+% Memberships section
+%----------------------------------------------------------------------------------------
+
+\tableEnv{Memberships}{
+    \entry{Couch Potatoes Anonymous}{A support group for those addicted to binge-watching TV shows}
+    \entry{Procrastinators' Club}{A group that will eventually get around to doing something, someday}
+}
+
+\end{document}
 `,
   },
 

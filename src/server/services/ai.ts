@@ -273,6 +273,33 @@ Return JSON conforming EXACTLY to:
   return JSON.parse(text) as JobMatchAnalysis;
 }
 
+function cleanAndParseJson<T>(rawText: string): T {
+  let clean = rawText.trim();
+  if (clean.startsWith("```json")) clean = clean.slice(7);
+  else if (clean.startsWith("```")) clean = clean.slice(3);
+  if (clean.endsWith("```")) clean = clean.slice(0, -3);
+  clean = clean.trim();
+
+  try {
+    return JSON.parse(clean) as T;
+  } catch (initialErr) {
+    // When LLMs output LaTeX source inside JSON, unescaped backslashes (e.g. \d, \i, \s, \c) cause JSON.parse to fail.
+    // Repair odd sequences of backslashes before non-JSON-escape characters:
+    try {
+      const withFixedSlashes = clean.replace(/(\\+)([^"\\\/bfnrtu]|u(?![\da-fA-F]{4})|$)/g, (match, slashes, nextChar) => {
+        if (slashes.length % 2 === 1) {
+          return slashes + "\\" + nextChar;
+        }
+        return match;
+      });
+      return JSON.parse(withFixedSlashes) as T;
+    } catch (secondErr) {
+      console.error("[CareerForge AI] Failed to parse JSON with repaired slashes:", (initialErr as any)?.message);
+      throw secondErr;
+    }
+  }
+}
+
 // ─── 2. GENERATE TAILORED RESUME (STEP 2) ─────────────────────────────────────
 export async function generateTailoredResumeOnly(
   jobDescription: string,
@@ -288,15 +315,17 @@ export async function generateTailoredResumeOnly(
     : "";
 
   const prompt = `
-You are an elite executive resume writer and LaTeX engineer. Generate an ATS-optimized, high-impact resume tailored for the job description below using ALL verified profile details from the candidate.
+You are the CareerForge AI Resume Engineering Engine.
+Your task is to take this candidate's verified profile and generate a high-impact, ATS-optimized, fully customized resume tailored specifically to the target Job Description, styled using the chosen template.
 
-=== CANDIDATE PROFILE ===
-Full Name: ${candidate.name}
+=== CANDIDATE VERIFIED PROFILE DATA ===
+Name: ${candidate.name}
 Headline: ${candidate.headline || ""}
+Target Role: ${candidate.headline || "Software Engineer"}
 Summary: ${candidate.summary || ""}
-Contact:
-  Email: ${candidate.contact.email || ""}
+Contact Info:
   Phone: ${phoneStr}
+  Email: ${candidate.contact.email || ""}
   Location: ${candidate.contact.location || ""}
   LinkedIn: ${candidate.contact.linkedinUrl || ""}
   GitHub: ${candidate.contact.githubUrl || ""}
@@ -317,22 +346,25 @@ Template Rules:
 ${layoutRules}
 
 === INSTRUCTIONS & CRITICAL GUARDRAILS ===
-1. KEYWORD OPTIMIZATION: Naturally incorporate the target job description's critical keywords and industry terminology into the candidate's experience and project bullets. DO NOT fabricate companies or false job titles, but phrase genuine accomplishments to mirror the target role's technical vocabulary.
-2. INCLUDE ALL CANDIDATE SECTIONS IN THE RESUME:
-   - Header: Full Name, Phone, Email, Location, LinkedIn, GitHub, Portfolio.
-   - Education: Every university/college, degree, field of study, graduation year, and GPA (e.g. "8.5 / 10 CGPA").
-   - Technical Skills: Clean categories (Languages, Frameworks, Developer Tools, Databases, Cloud).
-   - Work Experience: Job Title, Company, Location, Dates, Employment Type (e.g. Full-Time, Internship), and quantifiable metrics-driven accomplishment bullets.
-   - Projects: Project Title, Tech Stack, URLs, and problem-solution-impact bullets.
-   - Certifications: Issuer, certification name, and year (if any in profile).
-3. COMPLETE STANDALONE LATEX SOURCE:
+1. CANDIDATE IDENTITY INTEGRITY:
+   - "contact.name" MUST be "${candidate.name}". NEVER replace the candidate's name with a job title like "Aspiring Software Engineer".
+   - "contact.phone" MUST be "${phoneStr}".
+   - "contact.email" MUST be "${candidate.contact.email || ""}".
+2. KEYWORD OPTIMIZATION & HONESTY:
+   - Naturally incorporate the target job description's critical keywords, tools, and technical terms into skills, education highlights, and project/experience bullets.
+   - DO NOT fabricate fake employers. If the candidate has 0 corporate experiences (e.g. fresh graduate/student), highlight Education, Academic Projects, Certifications, and Core Technical Competencies.
+3. INCLUDE ALL CANDIDATE SECTIONS:
+   - Education: Include every university/college, degree, field of study, graduation year, and GPA.
+   - Certifications: Include all certifications with issuer and credential details.
+   - Skills: Clean, structured categorization aligned with the target JD.
+4. COMPLETE STANDALONE LATEX SOURCE:
    - "latexSource" MUST be 100% syntactically valid LaTeX compilable with pdflatex on Overleaf (beginning with \\documentclass and ending with \\end{document}).
-   - Escape all LaTeX special characters: & as \\&, % as \\%, _ as \\_, # as \\#, $ as \\$.
-   - Must fit cleanly onto 1-2 pages without clipping or syntax errors.
+   - Escape all LaTeX special characters: & as \\&, % as \\%, _ as \\_, # as \\$, $ as \\$.
+   - Ensure all JSON backslashes in latexSource are properly escaped so the output is strictly valid JSON.
 
 Return JSON conforming EXACTLY to:
 {
-  "title": "string",
+  "title": "${candidate.name} - ${selectedTemplate.name}",
   "targetRole": "string",
   "summary": "string",
   "contact": {
@@ -386,7 +418,91 @@ Return JSON conforming EXACTLY to:
     responseMimeType: "application/json",
     temperature: 0.2,
   });
-  return JSON.parse(text) as TailoredResumeResult;
+
+  const parsed = cleanAndParseJson<TailoredResumeResult>(text);
+
+  // ─── GUARANTEE COMPLETE CANDIDATE PROFILE DATA INTEGRITY ─────────────────
+  // 1. Contact Name & Info
+  if (!parsed.contact) {
+    parsed.contact = {
+      name: candidate.name,
+      email: candidate.contact.email || "",
+      phone: phoneStr,
+      location: candidate.contact.location || "",
+      linkedin: candidate.contact.linkedinUrl || "",
+      github: candidate.contact.githubUrl || "",
+      website: candidate.contact.websiteUrl || "",
+    };
+  } else {
+    if (!parsed.contact.name || parsed.contact.name.toLowerCase().includes("aspiring") || parsed.contact.name.toLowerCase().includes("engineer")) {
+      parsed.contact.name = candidate.name;
+    }
+    if (!parsed.contact.email) parsed.contact.email = candidate.contact.email || "";
+    if (!parsed.contact.phone) parsed.contact.phone = phoneStr;
+    if (!parsed.contact.location) parsed.contact.location = candidate.contact.location || "";
+    if (!parsed.contact.linkedin) parsed.contact.linkedin = candidate.contact.linkedinUrl || "";
+    if (!parsed.contact.github) parsed.contact.github = candidate.contact.githubUrl || "";
+    if (!parsed.contact.website) parsed.contact.website = candidate.contact.websiteUrl || "";
+  }
+
+  // 2. Education: Ensure candidate education is NEVER omitted
+  if ((!parsed.educations || parsed.educations.length === 0) && candidate.educations && candidate.educations.length > 0) {
+    parsed.educations = candidate.educations.map((ed) => ({
+      institution: ed.institution,
+      degree: ed.degree,
+      dates: [ed.startDate, ed.endDate].filter(Boolean).join(" - ") || "Current",
+      gpa: ed.gpa ? `${ed.gpa}${ed.gpaScale ? `/${ed.gpaScale}` : ""}` : "",
+    }));
+  }
+
+  // 3. Certifications: Ensure candidate certifications are NEVER omitted
+  if ((!parsed.certifications || parsed.certifications.length === 0) && candidate.certifications && candidate.certifications.length > 0) {
+    parsed.certifications = candidate.certifications.map((c) => ({
+      name: c.name,
+      issuer: c.issuer,
+      date: c.issueDate || "",
+    }));
+  }
+
+  // 4. Skills: Ensure skills are populated
+  if (!parsed.skills || parsed.skills.length === 0) {
+    if (candidate.skills && candidate.skills.length > 0) {
+      parsed.skills = candidate.skills;
+    } else {
+      parsed.skills = [
+        "Data Structures & Algorithms",
+        "Python",
+        "SQL",
+        "Machine Learning",
+        "Git",
+        "Problem Solving",
+      ];
+    }
+  }
+
+  // 5. Work Experience: Preserve candidate experiences if omitted by model
+  if ((!parsed.experiences || parsed.experiences.length === 0) && candidate.experiences && candidate.experiences.length > 0) {
+    parsed.experiences = candidate.experiences.map((e) => ({
+      company: e.company,
+      title: e.title,
+      employmentType: e.employmentType || "Full-Time",
+      dates: [e.startDate, e.endDate].filter(Boolean).join(" - ") || "Present",
+      location: e.location || "",
+      bullets: e.bullets,
+    }));
+  }
+
+  // 6. Projects: Preserve candidate projects if omitted by model
+  if ((!parsed.projects || parsed.projects.length === 0) && candidate.projects && candidate.projects.length > 0) {
+    parsed.projects = candidate.projects.map((p) => ({
+      name: p.name,
+      technologies: p.technologies,
+      link: p.demoUrl || p.repoUrl || "",
+      bullets: p.bullets,
+    }));
+  }
+
+  return parsed;
 }
 
 // ─── 3. COMBINED ANALYSIS & RESUME (BACKWARDS COMPATIBLE) ────────────────────
