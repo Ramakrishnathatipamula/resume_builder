@@ -8,9 +8,9 @@
 | **Phase 1** | Foundation, Database & Auth | **COMPLETED** | 2026-11-03 | 2026-11-03 | Next.js 15 App Router, Neon PostgreSQL synced, Prisma Client v6, Better Auth, multi-tenant isolation verified. |
 | **Phase 2** | Career Profile Management | **COMPLETED** | 2026-11-03 | 2026-11-04 | Full career profile builder (personal, education, work, projects, skills, certs) with completion score & Neon persistence. Employment type dropdown + color-coded badges (Full-Time/Internship/Contract etc). Build ✅ commit 99aab37. |
 | **Phase 3** | Job Description Intelligence | **COMPLETED** | 2026-11-04 | 2026-11-04 | `/dashboard/jobs` — JD extraction engine (Gemini), structured intelligence (skills/tools/ATS keywords/responsibilities), saved JD library with view/delete. Sidebar updated. Build ✅ commit 166c2f4. |
-| **Phase 4** | Skill Matching Engine | **READY** | - | - | Deterministic scoring and skill gap analyzer. |
-| **Phase 5** | Resume Template Library | PENDING | - | - | ATS-friendly template gallery with dynamic layouts. |
-| **Phase 6** | AI Resume Generation | PENDING | - | - | Hallucination-free job-tailored resume generator. |
+| **Phase 4** | Skill Matching Engine | **COMPLETED** | 2026-11-04 | 2026-11-04 | Detailed compatibility scoring: technical/experience/education/projects breakdown bars, score ring, soft skills, partial matches, education/experience comparisons, project evidence cards. Commit 36a4ddf. |
+| **Phase 5** | Resume Template Library | **COMPLETED** | 2026-11-04 | 2026-11-04 | ATS template gallery (Jake's Modern Tech, Classic Executive, Minimalist Compact, Academic), template popup modal on Generate Resume, template-engineered LaTeX compilation, downloadable PDF. Commit bb6630a. |
+| **Phase 6** | AI Resume Generation | **READY** | - | - | Hallucination-free job-tailored resume generator. |
 | **Phase 7** | Resume Export & Overleaf | PENDING | - | - | LaTeX package generator, Overleaf bridge, PDF export. |
 | **Phase 8** | Multi-Agent AI Architecture | PENDING | - | - | AG-001 to AG-009 registry, model gateway, Zod schemas. |
 | **Phase 9** | Personalized Learning Roadmap| PENDING | - | - | Skill gap closure plans and recommended resources. |
