@@ -373,10 +373,14 @@ export default function DashboardPage() {
                   <Briefcase className="w-3 h-3" />
                   {matchAnalysis.company || "Target Company"}
                 </span>
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-800/60 text-emerald-300 inline-flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3 h-3" />
+                  Step 1: Job Intelligence Analyzed
+                </span>
                 {tailoredResume && (
-                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-800/60 text-emerald-300 inline-flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3 h-3" />
-                    Resume Generated ({activeTemplate.name.split(" ")[0]})
+                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-purple-950/60 border border-purple-800/60 text-purple-300 inline-flex items-center gap-1.5">
+                    <Sparkles className="w-3 h-3" />
+                    Resume Ready ({activeTemplate.name.split(" ")[0]})
                   </span>
                 )}
               </div>
@@ -399,57 +403,15 @@ export default function DashboardPage() {
             </button>
           </div>
 
-          {/* ── CALL TO ACTION BANNER: GENERATE RESUME ─────────────── */}
-          <div className="p-5 rounded-2xl bg-gradient-to-r from-indigo-950/80 via-purple-950/60 to-gray-900 border border-indigo-800/60 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">
-                Step 2: Resume Engineering
-              </span>
-              <h3 className="text-base font-bold text-white">
-                {tailoredResume ? "Resume Tailored & Ready!" : "Ready to Generate Your Tailored Resume?"}
-              </h3>
-              <p className="text-xs text-gray-300 max-w-xl">
-                {tailoredResume
-                  ? `Resume engineered using the ${activeTemplate.name} template with all verified profile details and JD keywords.`
-                  : "Pick from built-in ATS templates or your custom LaTeX template to tailor a high-impact resume incorporating this job's keywords."}
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setShowTemplateModal(true)}
-              disabled={generatingResume}
-              className="px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition shrink-0 cursor-pointer disabled:opacity-50"
-            >
-              {generatingResume ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Engineering Resume...</span>
-                </>
-              ) : tailoredResume ? (
-                <>
-                  <RefreshCw className="w-4 h-4" />
-                  <span>Change Template & Regenerate</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4" />
-                  <span>Select Template & Generate Resume</span>
-                  <ArrowRight className="w-4 h-4 ml-0.5" />
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* ── RESULT TABS ─────────────────────────────────────────── */}
+          {/* ── RESULT TABS (JOB INTELLIGENCE FIRST) ──────────────────── */}
           <div className="flex gap-1 bg-gray-900/60 border border-gray-800 rounded-xl p-1 overflow-x-auto">
             {(["overview", "skills", "education", "roadmap", ...(tailoredResume ? ["resume"] : [])] as const).map((tab) => {
               const labels: Record<string, string> = {
-                overview:  "Overview",
-                skills:    "Skills Match",
-                education: "Education & Experience",
-                roadmap:   "Learning Roadmap",
-                resume:    "Generated Resume",
+                overview:  "1. Overview & Match",
+                skills:    "2. Skills Breakdown",
+                education: "3. Education & Experience",
+                roadmap:   "4. Learning Roadmap",
+                resume:    "5. Generated Resume",
               };
               return (
                 <button
@@ -765,6 +727,68 @@ export default function DashboardPage() {
                   <p className="text-sm text-gray-400 mt-1">You already have all the skills this job requires.</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ── STEP 2 ACTION BANNER (SHOWN BELOW JOB INTELLIGENCE) ── */}
+          {activeResultTab !== "resume" && (
+            <div className="p-6 rounded-2xl bg-gradient-to-r from-gray-900 via-indigo-950/40 to-gray-900 border border-indigo-800/40 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-5 mt-6">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-800 text-emerald-400 flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" />
+                    Step 1: Job Intelligence Analyzed
+                  </span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-950 border border-indigo-800 text-indigo-300">
+                    Step 2: Resume Engineering
+                  </span>
+                </div>
+                <h3 className="text-base font-bold text-white">
+                  {tailoredResume ? "Resume Tailored & Ready" : "Proceed to Select Template & Generate Resume"}
+                </h3>
+                <p className="text-xs text-gray-400 max-w-xl">
+                  {tailoredResume
+                    ? `Your resume is generated with ${activeTemplate.name} template with all verified profile details and JD keywords.`
+                    : "Now that you've reviewed the match score, required skills, and roadmap above, choose your preferred template to engineer your tailored resume."}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3 shrink-0">
+                {tailoredResume && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveResultTab("resume")}
+                    className="px-4 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-white font-semibold text-xs flex items-center gap-1.5 transition cursor-pointer"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>View Generated Resume</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowTemplateModal(true)}
+                  disabled={generatingResume}
+                  className="px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition shrink-0 cursor-pointer disabled:opacity-50"
+                >
+                  {generatingResume ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Engineering Resume...</span>
+                    </>
+                  ) : tailoredResume ? (
+                    <>
+                      <RefreshCw className="w-4 h-4" />
+                      <span>Switch Template</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      <span>Choose Template & Generate Resume</span>
+                      <ArrowRight className="w-4 h-4 ml-0.5" />
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           )}
 

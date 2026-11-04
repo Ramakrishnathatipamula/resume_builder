@@ -77,8 +77,8 @@ export default function DashboardLayout({
                   : "text-gray-300 hover:text-white hover:bg-gray-900/60"
               }`}
             >
-              <FileText className="w-4 h-4" />
-              <span>Generate Resume</span>
+              <Sparkles className="w-4 h-4" />
+              <span>Job Analysis & Resume</span>
             </Link>
 
             <div className="pt-2 pb-1.5 px-3 text-[11px] font-semibold tracking-wider uppercase text-gray-500">
