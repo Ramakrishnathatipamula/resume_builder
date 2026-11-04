@@ -350,13 +350,22 @@ ${layoutRules}
    - "contact.name" MUST be "${candidate.name}". NEVER replace the candidate's name with a job title like "Aspiring Software Engineer".
    - "contact.phone" MUST be "${phoneStr}".
    - "contact.email" MUST be "${candidate.contact.email || ""}".
-2. KEYWORD OPTIMIZATION & HONESTY:
-   - Naturally incorporate the target job description's critical keywords, tools, and technical terms into skills, education highlights, and project/experience bullets.
-   - DO NOT fabricate fake employers. If the candidate has 0 corporate experiences (e.g. fresh graduate/student), highlight Education, Academic Projects, Certifications, and Core Technical Competencies.
-3. INCLUDE ALL CANDIDATE SECTIONS:
-   - Education: Include every university/college, degree, field of study, graduation year, and GPA.
-   - Certifications: Include all certifications with issuer and credential details.
-   - Skills: Clean, structured categorization aligned with the target JD.
+
+2. DYNAMIC SECTION PRUNING & ZERO PLACEHOLDER TOLERANCE (CRITICAL):
+   - The selected resume template is a VISUAL BLUEPRINT ONLY (for styling, typography, spacing, rules, and colors).
+   - NEVER keep dummy/sample placeholder text from the template (e.g. "Carl Johnson", "Dank Memes Inc.", "Viral News Robotics", "Library of Alexandria", "XYZ Institute", "Lorem ipsum", "PigeonScript", dummy dates).
+   - DYNAMICALLY ADAPT SECTIONS TO CANDIDATE'S ACTUAL DATA COUNT:
+     * If the candidate has 1 work experience, render ONLY that 1 experience using the template's style. NEVER output 2nd or 3rd dummy experiences just because the template had 3.
+     * If the candidate has 0 work experiences, COMPLETELY SKIP AND OMIT the Work Experience section from both the JSON ("experiences": []) and the latexSource. Do NOT output empty headers or fake companies!
+     * If the candidate has 0 projects, COMPLETELY SKIP AND OMIT the Projects section ("projects": []).
+     * If the candidate has 0 certifications, COMPLETELY SKIP AND OMIT the Certifications section ("certifications": []).
+     * If the template has extra sample sections (e.g. "Memberships", "Extracurriculars", "Language proficiencies", "Core Competencies", "Positions") that the candidate has no data for, COMPLETELY SKIP AND OMIT those sections!
+     * If the candidate has data (such as Education with GPA, Certifications, Skills) that the template did not showcase, RENDER that section matching the template's exact font, heading style, and color palette.
+
+3. KEYWORD OPTIMIZATION & HONESTY:
+   - Naturally incorporate the target job description's critical keywords, tools, and technical terms into the candidate's verified skills, education highlights, and project/experience bullets.
+   - DO NOT fabricate fake employers or degrees.
+
 4. COMPLETE STANDALONE LATEX SOURCE:
    - "latexSource" MUST be 100% syntactically valid LaTeX compilable with pdflatex on Overleaf (beginning with \\documentclass and ending with \\end{document}).
    - Escape all LaTeX special characters: & as \\&, % as \\%, _ as \\_, # as \\$, $ as \\$.
@@ -455,8 +464,10 @@ Return JSON conforming EXACTLY to:
     }));
   }
 
-  // 3. Certifications: Ensure candidate certifications are NEVER omitted
-  if ((!parsed.certifications || parsed.certifications.length === 0) && candidate.certifications && candidate.certifications.length > 0) {
+  // 3. Certifications: Strictly match candidate data (omit if 0)
+  if (!candidate.certifications || candidate.certifications.length === 0) {
+    parsed.certifications = [];
+  } else if ((!parsed.certifications || parsed.certifications.length === 0) && candidate.certifications.length > 0) {
     parsed.certifications = candidate.certifications.map((c) => ({
       name: c.name,
       issuer: c.issuer,
@@ -480,8 +491,10 @@ Return JSON conforming EXACTLY to:
     }
   }
 
-  // 5. Work Experience: Preserve candidate experiences if omitted by model
-  if ((!parsed.experiences || parsed.experiences.length === 0) && candidate.experiences && candidate.experiences.length > 0) {
+  // 5. Work Experience: Strictly match candidate data (omit if 0)
+  if (!candidate.experiences || candidate.experiences.length === 0) {
+    parsed.experiences = [];
+  } else if ((!parsed.experiences || parsed.experiences.length === 0) && candidate.experiences.length > 0) {
     parsed.experiences = candidate.experiences.map((e) => ({
       company: e.company,
       title: e.title,
@@ -492,8 +505,10 @@ Return JSON conforming EXACTLY to:
     }));
   }
 
-  // 6. Projects: Preserve candidate projects if omitted by model
-  if ((!parsed.projects || parsed.projects.length === 0) && candidate.projects && candidate.projects.length > 0) {
+  // 6. Projects: Strictly match candidate data (omit if 0)
+  if (!candidate.projects || candidate.projects.length === 0) {
+    parsed.projects = [];
+  } else if ((!parsed.projects || parsed.projects.length === 0) && candidate.projects.length > 0) {
     parsed.projects = candidate.projects.map((p) => ({
       name: p.name,
       technologies: p.technologies,
