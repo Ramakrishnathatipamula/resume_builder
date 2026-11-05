@@ -41,6 +41,8 @@ import {
   Camera,
   Upload,
   Image as ImageIcon,
+  Edit3,
+  X,
 } from "lucide-react";
 
 export default function CareerProfilePage() {
@@ -51,6 +53,7 @@ export default function CareerProfilePage() {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // 1. Personal Info State (including Country Code, Phone, DOB, Gender, Passport Photo)
+  const [isEditingPersonal, setIsEditingPersonal] = useState(false);
   const [photoUrl, setPhotoUrl] = useState("");
   const [showUrlInput, setShowUrlInput] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -168,6 +171,7 @@ export default function CareerProfilePage() {
       });
       if (res.success) {
         setMessage({ type: "success", text: "Personal details & passport photo saved successfully!" });
+        setIsEditingPersonal(false);
         if (typeof window !== "undefined") {
           window.dispatchEvent(new CustomEvent("profilePhotoUpdated", { detail: photoUrl }));
         }
@@ -474,19 +478,81 @@ export default function CareerProfilePage() {
       {/* ========================================================= */}
       {activeTab === "personal" && (
         <form onSubmit={handleSavePersonal} className="p-6 md:p-8 rounded-2xl bg-gray-900/70 border border-gray-800 space-y-6">
-          <div className="flex items-center justify-between pb-4 border-b border-gray-800">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-800">
             <div>
-              <h2 className="text-base font-bold text-white">Personal Information</h2>
-              <p className="text-xs text-gray-400 mt-0.5">Manage your personal details, contact information, and target roles.</p>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-white">Personal Information</h2>
+                {!isEditingPersonal ? (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-800/80 border border-gray-700/80 text-gray-400 font-semibold">
+                    Locked / View Mode
+                  </span>
+                ) : (
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-950/80 border border-amber-800 text-amber-300 font-semibold animate-pulse">
+                    Editing Mode Active
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {isEditingPersonal
+                  ? "Make changes below and click 'Save Information' to persist."
+                  : "Click 'Edit' to unlock fields and update your personal details or photo."}
+              </p>
             </div>
-            <button
-              type="submit"
-              disabled={savingPersonal}
-              className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-2 transition disabled:opacity-50"
-            >
-              {savingPersonal ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-              <span>Save Information</span>
-            </button>
+
+            {/* Action Buttons: Edit, Cancel, Save */}
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              {!isEditingPersonal ? (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingPersonal(true)}
+                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-md shadow-indigo-600/20"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Edit</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    // Revert changes back to current saved profile
+                    if (profile) {
+                      setFullName(profile.fullName || "");
+                      setHeadline(profile.headline || "");
+                      setSummary(profile.summary || "");
+                      setEmail(profile.email || "");
+                      setCountryCode(profile.countryCode || "+91");
+                      setPhone(profile.phone || "");
+                      setDob(profile.dob ? new Date(profile.dob).toISOString().split("T")[0] : "");
+                      setGender(profile.gender || "");
+                      setLocation(profile.location || "");
+                      setWebsiteUrl(profile.websiteUrl || "");
+                      setGithubUrl(profile.githubUrl || "");
+                      setLinkedinUrl(profile.linkedinUrl || "");
+                      setTargetRoles(profile.targetRoles || []);
+                      setPhotoUrl(profile.photoUrl || "");
+                    }
+                    setIsEditingPersonal(false);
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span>Cancel</span>
+                </button>
+              )}
+
+              <button
+                type="submit"
+                disabled={!isEditingPersonal || savingPersonal}
+                className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition ${
+                  isEditingPersonal
+                    ? "bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shadow-md shadow-emerald-600/30"
+                    : "bg-gray-800/60 border border-gray-700/50 text-gray-500 cursor-not-allowed opacity-60"
+                }`}
+              >
+                {savingPersonal ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                <span>Save Information</span>
+              </button>
+            </div>
           </div>
 
           {/* ── PASSPORT SIZE PHOTO UPLOAD SECTION ── */}
@@ -495,18 +561,27 @@ export default function CareerProfilePage() {
             <input
               type="file"
               ref={fileInputRef}
+              disabled={!isEditingPersonal}
               onChange={handlePhotoFileChange}
               accept="image/png,image/jpeg,image/webp"
               className="hidden"
             />
 
-            {/* Passport Photo Frame (3.5 : 4.5 Ratio) with Direct Click-to-Upload */}
+            {/* Passport Photo Frame (3.5 : 4.5 Ratio) */}
             <div className="shrink-0 flex flex-col items-center">
               <div
-                onClick={() => fileInputRef.current?.click()}
-                className="w-32 h-40 rounded-xl border-2 border-dashed border-indigo-500/60 hover:border-indigo-400 bg-gray-900 overflow-hidden flex flex-col items-center justify-center relative shadow-lg cursor-pointer group transition-all duration-200 hover:scale-[1.02]"
+                onClick={() => {
+                  if (isEditingPersonal) {
+                    fileInputRef.current?.click();
+                  }
+                }}
+                className={`w-32 h-40 rounded-xl border-2 border-dashed overflow-hidden flex flex-col items-center justify-center relative shadow-lg transition-all duration-200 ${
+                  isEditingPersonal
+                    ? "border-indigo-500/80 hover:border-indigo-400 bg-gray-900 cursor-pointer group hover:scale-[1.02]"
+                    : "border-gray-800 bg-gray-950/60 cursor-not-allowed"
+                }`}
                 style={{ aspectRatio: "3.5 / 4.5" }}
-                title="Click to select passport photo"
+                title={isEditingPersonal ? "Click to select passport photo" : "Click 'Edit' above to unlock photo changes"}
               >
                 {photoUrl ? (
                   <>
@@ -516,39 +591,47 @@ export default function CareerProfilePage() {
                       alt="Passport Photo Preview"
                       className="w-full h-full object-cover"
                     />
-                    {/* Hover Overlay with Fingerpoint */}
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 text-white p-2 text-center">
-                      <Camera className="w-6 h-6 text-indigo-300" />
-                      <span className="text-[10px] font-bold bg-indigo-600 px-2 py-0.5 rounded-full shadow">
-                        Change Photo
-                      </span>
-                      <span className="text-[8px] text-gray-300">Click to replace</span>
-                    </div>
+                    {/* Hover Overlay with Fingerpoint (only in edit mode) */}
+                    {isEditingPersonal && (
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 text-white p-2 text-center">
+                        <Camera className="w-6 h-6 text-indigo-300" />
+                        <span className="text-[10px] font-bold bg-indigo-600 px-2 py-0.5 rounded-full shadow">
+                          Change Photo
+                        </span>
+                        <span className="text-[8px] text-gray-300">Click to replace</span>
+                      </div>
+                    )}
 
-                    {/* Quick Remove Button */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemovePhoto();
-                      }}
-                      className="absolute top-1.5 right-1.5 p-1 rounded-full bg-red-950/90 hover:bg-red-800 border border-red-700/80 text-red-300 hover:text-white transition shadow z-10 cursor-pointer"
-                      title="Remove photo"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
+                    {/* Quick Remove Button (only in edit mode) */}
+                    {isEditingPersonal && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemovePhoto();
+                        }}
+                        className="absolute top-1.5 right-1.5 p-1 rounded-full bg-red-950/90 hover:bg-red-800 border border-red-700/80 text-red-300 hover:text-white transition shadow z-10 cursor-pointer"
+                        title="Remove photo"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
                   </>
                 ) : (
-                  <div className="text-center p-3 flex flex-col items-center justify-center gap-2 group-hover:text-indigo-300 transition">
-                    <div className="w-10 h-10 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center group-hover:bg-indigo-600/30 group-hover:border-indigo-400 transition">
-                      <Camera className="w-5 h-5 text-indigo-400 group-hover:text-white transition" />
+                  <div className="text-center p-3 flex flex-col items-center justify-center gap-2 transition">
+                    <div className="w-10 h-10 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center">
+                      <Camera className="w-5 h-5 text-indigo-400" />
                     </div>
                     {/* Upload Photo Badge directly inside border lines */}
-                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-indigo-600 group-hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/30 transition">
+                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-lg transition ${
+                      isEditingPersonal
+                        ? "bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/30"
+                        : "bg-gray-800 text-gray-400"
+                    }`}>
                       Upload Photo
                     </span>
-                    <span className="text-[8px] text-gray-400 group-hover:text-gray-300">
-                      Click to choose image
+                    <span className="text-[8px] text-gray-500">
+                      {isEditingPersonal ? "Click to choose image" : "Locked (Click Edit)"}
                     </span>
                   </div>
                 )}
@@ -567,38 +650,44 @@ export default function CareerProfilePage() {
                 </span>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-md shadow-indigo-600/20"
-                >
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>{photoUrl ? "Change Photo" : "Upload Passport Photo"}</span>
-                </button>
-
-                {photoUrl && (
+              {/* Action Buttons (enabled only when editing) */}
+              {isEditingPersonal ? (
+                <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start animate-in fade-in">
                   <button
                     type="button"
-                    onClick={handleRemovePhoto}
-                    className="px-3 py-2 rounded-xl bg-gray-900 hover:bg-red-950/60 border border-gray-800 hover:border-red-800/60 text-red-400 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-md shadow-indigo-600/20"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Remove Photo</span>
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>{photoUrl ? "Change Photo" : "Upload Passport Photo"}</span>
                   </button>
-                )}
 
-                <button
-                  type="button"
-                  onClick={() => setShowUrlInput(!showUrlInput)}
-                  className="px-3 py-2 rounded-xl bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 text-xs font-medium transition cursor-pointer"
-                >
-                  {showUrlInput ? "Hide URL Input" : "Paste Image URL"}
-                </button>
-              </div>
+                  {photoUrl && (
+                    <button
+                      type="button"
+                      onClick={handleRemovePhoto}
+                      className="px-3 py-2 rounded-xl bg-gray-900 hover:bg-red-950/60 border border-gray-800 hover:border-red-800/60 text-red-400 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Remove Photo</span>
+                    </button>
+                  )}
 
-              {showUrlInput && (
+                  <button
+                    type="button"
+                    onClick={() => setShowUrlInput(!showUrlInput)}
+                    className="px-3 py-2 rounded-xl bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 text-xs font-medium transition cursor-pointer"
+                  >
+                    {showUrlInput ? "Hide URL Input" : "Paste Image URL"}
+                  </button>
+                </div>
+              ) : (
+                <p className="text-xs text-gray-500 italic">
+                  Passport photo is locked. Click <strong className="text-indigo-400">Edit</strong> above to upload or change photo.
+                </p>
+              )}
+
+              {isEditingPersonal && showUrlInput && (
                 <div className="pt-1">
                   <label className="block text-[11px] font-medium text-gray-400 mb-1">
                     Direct Image URL (HTTPS)
@@ -622,19 +711,21 @@ export default function CareerProfilePage() {
               <input
                 type="text"
                 required
+                disabled={!isEditingPersonal}
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-gray-950/80 border border-gray-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-gray-950/80 border border-gray-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-gray-950/40"
               />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-300 mb-1.5">Professional Headline</label>
               <input
                 type="text"
+                disabled={!isEditingPersonal}
                 value={headline}
                 onChange={(e) => setHeadline(e.target.value)}
                 placeholder="e.g. Senior Full-Stack Engineer"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-gray-950/80 border border-gray-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-gray-950/80 border border-gray-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-gray-950/40"
               />
             </div>
           </div>
@@ -648,9 +739,10 @@ export default function CareerProfilePage() {
               </label>
               <input
                 type="date"
+                disabled={!isEditingPersonal}
                 value={dob}
                 onChange={(e) => setDob(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-gray-900 border border-gray-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-gray-900 border border-gray-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-gray-950/40"
               />
             </div>
             <div>
@@ -659,9 +751,10 @@ export default function CareerProfilePage() {
                 <span>Gender</span>
               </label>
               <select
+                disabled={!isEditingPersonal}
                 value={gender}
                 onChange={(e) => setGender(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-gray-900 border border-gray-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-gray-900 border border-gray-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-gray-950/40"
               >
                 <option value="">Select Gender...</option>
                 <option value="Male">Male</option>
@@ -680,9 +773,10 @@ export default function CareerProfilePage() {
                 <Mail className="w-4 h-4 text-gray-500 absolute left-3 top-3" />
                 <input
                   type="email"
+                  disabled={!isEditingPersonal}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-gray-950/80 border border-gray-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-gray-950/80 border border-gray-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-gray-950/40"
                 />
               </div>
             </div>
@@ -695,9 +789,10 @@ export default function CareerProfilePage() {
                 {/* Country Code Picklist */}
                 <div className="w-40 shrink-0">
                   <select
+                    disabled={!isEditingPersonal}
                     value={countryCode}
                     onChange={(e) => setCountryCode(e.target.value)}
-                    className="w-full px-2.5 py-2.5 rounded-xl bg-gray-950/80 border border-gray-800 text-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                    className="w-full px-2.5 py-2.5 rounded-xl bg-gray-950/80 border border-gray-800 text-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-gray-950/40"
                   >
                     {COUNTRY_CODES.map((c, i) => (
                       <option key={`${c.code}-${i}`} value={c.code}>
@@ -711,10 +806,11 @@ export default function CareerProfilePage() {
                   <Phone className="w-4 h-4 text-gray-500 absolute left-3 top-3" />
                   <input
                     type="tel"
+                    disabled={!isEditingPersonal}
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="9876543210"
-                    className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-gray-950/80 border border-gray-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-gray-950/80 border border-gray-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-gray-950/40"
                   />
                 </div>
               </div>
@@ -729,10 +825,11 @@ export default function CareerProfilePage() {
                 <MapPin className="w-4 h-4 text-gray-500 absolute left-3 top-3" />
                 <input
                   type="text"
+                  disabled={!isEditingPersonal}
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   placeholder="Hyderabad, India (or Remote)"
-                  className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-gray-950/80 border border-gray-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-gray-950/80 border border-gray-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-gray-950/40"
                 />
               </div>
             </div>
@@ -742,10 +839,11 @@ export default function CareerProfilePage() {
                 <Github className="w-4 h-4 text-gray-500 absolute left-3 top-3" />
                 <input
                   type="url"
+                  disabled={!isEditingPersonal}
                   value={githubUrl}
                   onChange={(e) => setGithubUrl(e.target.value)}
                   placeholder="https://github.com/username"
-                  className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-gray-950/80 border border-gray-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-gray-950/80 border border-gray-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-gray-950/40"
                 />
               </div>
             </div>
@@ -755,10 +853,11 @@ export default function CareerProfilePage() {
                 <Linkedin className="w-4 h-4 text-gray-500 absolute left-3 top-3" />
                 <input
                   type="url"
+                  disabled={!isEditingPersonal}
                   value={linkedinUrl}
                   onChange={(e) => setLinkedinUrl(e.target.value)}
                   placeholder="https://linkedin.com/in/username"
-                  className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-gray-950/80 border border-gray-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-gray-950/80 border border-gray-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-gray-950/40"
                 />
               </div>
             </div>
@@ -768,32 +867,35 @@ export default function CareerProfilePage() {
             <label className="block text-xs font-medium text-gray-300 mb-1.5">Professional Summary</label>
             <textarea
               rows={3}
+              disabled={!isEditingPersonal}
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
               placeholder="Concise overview of your technical background, core competencies, and career goals..."
-              className="w-full p-3.5 rounded-xl bg-gray-950/80 border border-gray-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed font-sans"
+              className="w-full p-3.5 rounded-xl bg-gray-950/80 border border-gray-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed font-sans disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-gray-950/40"
             />
           </div>
 
           {/* Target Job Roles */}
           <div className="pt-2">
             <label className="block text-xs font-medium text-gray-300 mb-1.5">Target Job Roles</label>
-            <div className="flex gap-2 mb-2">
-              <input
-                type="text"
-                value={targetRoleInput}
-                onChange={(e) => setTargetRoleInput(e.target.value)}
-                placeholder="e.g. Senior Full-Stack Engineer, Backend Architect..."
-                className="flex-1 px-3.5 py-2 rounded-xl bg-gray-950/80 border border-gray-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-              <button
-                type="button"
-                onClick={handleAddTargetRole}
-                className="px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-white text-xs font-semibold"
-              >
-                Add Role
-              </button>
-            </div>
+            {isEditingPersonal && (
+              <div className="flex gap-2 mb-2 animate-in fade-in">
+                <input
+                  type="text"
+                  value={targetRoleInput}
+                  onChange={(e) => setTargetRoleInput(e.target.value)}
+                  placeholder="e.g. Senior Full-Stack Engineer, Backend Architect..."
+                  className="flex-1 px-3.5 py-2 rounded-xl bg-gray-950/80 border border-gray-800 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddTargetRole}
+                  className="px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-white text-xs font-semibold cursor-pointer"
+                >
+                  Add Role
+                </button>
+              </div>
+            )}
             <div className="flex flex-wrap gap-2">
               {targetRoles.map((role) => (
                 <span
@@ -801,13 +903,15 @@ export default function CareerProfilePage() {
                   className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-indigo-950/60 border border-indigo-800/60 text-xs text-indigo-300"
                 >
                   <span>{role}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveTargetRole(role)}
-                    className="text-gray-400 hover:text-red-400"
-                  >
-                    ×
-                  </button>
+                  {isEditingPersonal && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTargetRole(role)}
+                      className="text-gray-400 hover:text-red-400 cursor-pointer"
+                    >
+                      ×
+                    </button>
+                  )}
                 </span>
               ))}
             </div>
