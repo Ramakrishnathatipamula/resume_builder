@@ -409,6 +409,7 @@ My brief description.~\mylipsum
 \textBF{Unix} --- \mylipsum
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \sectitle{Core Competencies}
 
 \textBF{Leadership} --- \mylipsum

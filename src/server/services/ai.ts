@@ -533,3 +533,89 @@ export async function analyzeJobAndGenerateResume(
     tailoredResume,
   };
 }
+
+// ─── 4. ATS RESUME AUDIT & SCORING ENGINE ────────────────────────────────────
+export interface ResumeAtsScoreResult {
+  overallScore: number; // 0 - 100
+  grade: "A+" | "A" | "B+" | "B" | "Needs Improvement";
+  categoryBreakdown: {
+    keywordMatch: number; // 0 - 100
+    atsFormatting: number; // 0 - 100
+    actionVerbsAndImpact: number; // 0 - 100
+    sectionCompleteness: number; // 0 - 100
+  };
+  matchedKeywords: string[];
+  missingKeywords: string[];
+  strengths: string[];
+  improvements: string[];
+  atsAssessmentSummary: string;
+}
+
+export async function evaluateResumeAtsScore(
+  jobDescription: string,
+  resumeContent: TailoredResumeResult,
+  latexSource?: string
+): Promise<ResumeAtsScoreResult> {
+  const prompt = `
+You are an enterprise Applicant Tracking System (ATS) auditing engine (modeling Workday, Taleo, Greenhouse, and Lever algorithms).
+Evaluate this engineered resume strictly against the target Job Description to provide an accurate, realistic ATS score.
+
+=== TARGET JOB DESCRIPTION ===
+${jobDescription}
+
+=== CANDIDATE'S TAILORED RESUME ===
+Target Role: ${resumeContent.targetRole}
+Professional Summary: ${resumeContent.summary}
+Technical Skills: ${(resumeContent.skills || []).join(", ")}
+Education: ${JSON.stringify(resumeContent.educations || [], null, 2)}
+Work Experience: ${JSON.stringify(resumeContent.experiences || [], null, 2)}
+Projects: ${JSON.stringify(resumeContent.projects || [], null, 2)}
+Certifications: ${JSON.stringify(resumeContent.certifications || [], null, 2)}
+
+=== LATEX SOURCE SNIPPET ===
+${latexSource ? latexSource.slice(0, 1500) : "LaTeX Document"}
+
+=== ATS AUDIT RUBRIC ===
+1. OVERALL SCORE (0 to 100):
+   - Keyword Match (40% weight): Presence of hard technical skills, tools, methodologies, and domain keywords specified in the JD.
+   - ATS Formatting & Parseability (25% weight): Clean standard section headers (Education, Skills, Experience, Projects), absence of unparseable tables or columns that trap OCR parsers, standard contact layout.
+   - Action Verbs & Quantifiable Impact (20% weight): Measurable outcomes, percentages, metrics, strong action verbs.
+   - Section Completeness (15% weight): Name, email, phone, education with GPA, skills, and credentials.
+2. EXTRACT EXACT KEYWORDS:
+   - "matchedKeywords": Specific keywords and skills from the JD that are present in the resume.
+   - "missingKeywords": Specific high-value keywords from the JD that are NOT yet in the resume.
+3. CONSTRUCTIVE FEEDBACK:
+   - "strengths": 3 concise bullet points highlighting what the resume does well for ATS.
+   - "improvements": 2-3 specific suggestions to optimize the resume further.
+4. ASSIGN GRADE:
+   - 90-100: "A+"
+   - 80-89: "A"
+   - 70-79: "B+"
+   - 60-69: "B"
+   - <60: "Needs Improvement"
+
+Return strictly valid JSON matching:
+{
+  "overallScore": number,
+  "grade": "A+" | "A" | "B+" | "B" | "Needs Improvement",
+  "categoryBreakdown": {
+    "keywordMatch": number,
+    "atsFormatting": number,
+    "actionVerbsAndImpact": number,
+    "sectionCompleteness": number
+  },
+  "matchedKeywords": ["string"],
+  "missingKeywords": ["string"],
+  "strengths": ["string"],
+  "improvements": ["string"],
+  "atsAssessmentSummary": "string"
+}
+`;
+
+  const text = await generateWithFallback(prompt, {
+    responseMimeType: "application/json",
+    temperature: 0.15,
+  });
+
+  return cleanAndParseJson<ResumeAtsScoreResult>(text);
+}

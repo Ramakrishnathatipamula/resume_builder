@@ -277,7 +277,15 @@ export default function JobIntelligencePage() {
                       </div>
 
                       {/* Actions */}
-                      <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                        <a
+                          href={`/dashboard?jobId=${job.id}&company=${encodeURIComponent(job.company)}&role=${encodeURIComponent(job.title)}`}
+                          className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition"
+                          title="Analyze & generate resume for this job"
+                        >
+                          <ArrowRight className="w-3.5 h-3.5" />
+                          Generate Resume
+                        </a>
                         <button
                           onClick={() => handleViewJob(job.id)}
                           className="p-2 rounded-lg text-gray-400 hover:text-indigo-300 hover:bg-indigo-950/40 transition"

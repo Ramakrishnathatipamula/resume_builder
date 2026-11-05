@@ -7,9 +7,11 @@ import {
   analyzeJobMatchOnly,
   generateTailoredResumeOnly,
   analyzeJobAndGenerateResume,
+  evaluateResumeAtsScore,
   CandidateProfileData,
   JobMatchAnalysis,
   TailoredResumeResult,
+  ResumeAtsScoreResult,
 } from "../services/ai";
 
 // ─── HELPER: EXTRACT FULL VERIFIED CANDIDATE PROFILE DATA ────────────────────
@@ -285,4 +287,44 @@ export async function processJobAndGenerateResume(
       },
     },
   };
+}
+
+// ─── 4. CALCULATE ACCURATE ATS SCORE FOR GENERATED RESUME ───────────────────
+export async function calculateResumeAtsScoreAction(
+  jobId: string,
+  tailoredResume: TailoredResumeResult
+) {
+  const headerList = await headers();
+  const session = await auth.api.getSession({ headers: headerList });
+  if (!session?.user) {
+    return { success: false, error: "You must be signed in to check ATS score." };
+  }
+
+  const userId = session.user.id;
+
+  try {
+    const job = await db.jobDescription.findFirst({
+      where: { id: jobId, userId },
+    });
+    if (!job) {
+      return { success: false, error: "Job description not found." };
+    }
+
+    const atsAudit = await evaluateResumeAtsScore(
+      job.rawText,
+      tailoredResume,
+      tailoredResume.latexSource
+    );
+
+    return {
+      success: true,
+      data: atsAudit,
+    };
+  } catch (error: any) {
+    console.error("Error evaluating ATS score:", error);
+    return {
+      success: false,
+      error: error?.message || "Failed to audit ATS score.",
+    };
+  }
 }
