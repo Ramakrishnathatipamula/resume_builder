@@ -20,6 +20,7 @@ import {
   getStoredCustomTemplates,
   ResumeTemplate,
 } from "@/lib/templates-data";
+import { TemplateVisualPreview } from "@/components/template-visual-preview";
 import {
   Sparkles,
   FileText,
@@ -1095,50 +1096,72 @@ export default function DashboardPage() {
                   className="p-8 rounded-2xl bg-gray-950 border border-gray-800 space-y-6 text-gray-200 shadow-2xl print:bg-white print:text-black print:p-0 print:border-0"
                 >
                   {/* 1. Complete Contact Header */}
-                  <div className="border-b border-gray-800 print:border-black pb-4 text-center sm:text-left">
-                    <h2 className="text-2xl font-black text-white print:text-black">
-                      {tailoredResume.contact?.name || session?.user?.name || "Candidate"}
-                    </h2>
-                    <p className="text-xs text-indigo-400 print:text-gray-700 font-bold mt-0.5 uppercase tracking-wider">
-                      {tailoredResume.targetRole || "Software Engineer"}
-                    </p>
+                  <div className="border-b border-gray-800 print:border-black pb-4 flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4">
+                    <div className="text-center sm:text-left flex-1">
+                      <h2 className="text-2xl font-black text-white print:text-black">
+                        {tailoredResume.contact?.name || session?.user?.name || "Candidate"}
+                      </h2>
+                      <p className="text-xs text-indigo-400 print:text-gray-700 font-bold mt-0.5 uppercase tracking-wider">
+                        {tailoredResume.targetRole || "Software Engineer"}
+                      </p>
 
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400 print:text-gray-700 mt-2">
-                      {(tailoredResume.contact?.email || session?.user?.email) && (
-                        <span className="flex items-center gap-1">
-                          <Mail className="w-3 h-3 text-gray-500" />
-                          {tailoredResume.contact?.email || session?.user?.email}
-                        </span>
-                      )}
-                      {tailoredResume.contact?.phone && (
-                        <span className="flex items-center gap-1">
-                          <Phone className="w-3 h-3 text-gray-500" />
-                          {tailoredResume.contact.phone}
-                        </span>
-                      )}
-                      {tailoredResume.contact?.location && (
-                        <span className="flex items-center gap-1">
-                          <MapPin className="w-3 h-3 text-gray-500" />
-                          {tailoredResume.contact.location}
-                        </span>
-                      )}
-                      {tailoredResume.contact?.linkedin && (
-                        <span className="flex items-center gap-1 text-indigo-400 print:text-black">
-                          <Linkedin className="w-3 h-3" />
-                          {tailoredResume.contact.linkedin}
-                        </span>
-                      )}
-                      {tailoredResume.contact?.github && (
-                        <span className="flex items-center gap-1 text-indigo-400 print:text-black">
-                          <Github className="w-3 h-3" />
-                          {tailoredResume.contact.github}
-                        </span>
-                      )}
+                      <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 text-xs text-gray-400 print:text-gray-700 mt-2">
+                        {(tailoredResume.contact?.email || session?.user?.email) && (
+                          <span className="flex items-center gap-1">
+                            <Mail className="w-3 h-3 text-gray-500" />
+                            {tailoredResume.contact?.email || session?.user?.email}
+                          </span>
+                        )}
+                        {tailoredResume.contact?.phone && (
+                          <span className="flex items-center gap-1">
+                            <Phone className="w-3 h-3 text-gray-500" />
+                            {tailoredResume.contact.phone}
+                          </span>
+                        )}
+                        {tailoredResume.contact?.location && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3 text-gray-500" />
+                            {tailoredResume.contact.location}
+                          </span>
+                        )}
+                        {tailoredResume.contact?.linkedin && (
+                          <span className="flex items-center gap-1 text-indigo-400 print:text-black">
+                            <Linkedin className="w-3 h-3" />
+                            {tailoredResume.contact.linkedin}
+                          </span>
+                        )}
+                        {tailoredResume.contact?.github && (
+                          <span className="flex items-center gap-1 text-indigo-400 print:text-black">
+                            <Github className="w-3 h-3" />
+                            {tailoredResume.contact.github}
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-xs text-gray-300 print:text-gray-800 mt-3 leading-relaxed">
+                        {tailoredResume.summary}
+                      </p>
                     </div>
 
-                    <p className="text-xs text-gray-300 print:text-gray-800 mt-3 leading-relaxed">
-                      {tailoredResume.summary}
-                    </p>
+                    {/* Passport Photo Frame (if photo present) */}
+                    {tailoredResume.contact?.photoUrl && (
+                      <div className="shrink-0 flex flex-col items-center">
+                        <div
+                          className="w-20 h-26 rounded-lg border-2 border-indigo-500/40 print:border-black overflow-hidden shadow-md bg-gray-900 print:bg-white"
+                          style={{ aspectRatio: "3.5 / 4.5" }}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={tailoredResume.contact.photoUrl}
+                            alt="Passport Photograph"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <span className="text-[9px] font-bold text-gray-500 print:hidden uppercase mt-1">
+                          Passport Photo
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* 2. Education Section */}
@@ -1325,7 +1348,7 @@ export default function DashboardPage() {
                   <div
                     key={tmpl.id}
                     onClick={() => setSelectedTemplateId(tmpl.id)}
-                    className={`p-4 rounded-2xl border transition cursor-pointer flex flex-col justify-between ${
+                    className={`p-3.5 rounded-2xl border transition cursor-pointer flex flex-col justify-between ${
                       isSelected
                         ? "bg-indigo-950/40 border-indigo-500 shadow-xl shadow-indigo-600/10 ring-2 ring-indigo-500/50"
                         : "bg-gray-950/60 border-gray-800/80 hover:border-gray-700 hover:bg-gray-950"
@@ -1333,10 +1356,15 @@ export default function DashboardPage() {
                   >
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border ${badgeStyles}`}>
                             {tmpl.badge}
                           </span>
+                          {tmpl.hasPhoto && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-teal-950 border border-teal-800 text-teal-300 font-semibold">
+                              📷 Photo Header
+                            </span>
+                          )}
                           {isCustom && (
                             <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-950 border border-purple-800 text-purple-300 font-semibold">
                               Custom
@@ -1352,21 +1380,25 @@ export default function DashboardPage() {
                         </div>
                       </div>
 
-                      <h4 className="font-bold text-white text-sm mb-0.5">{tmpl.name}</h4>
-                      <p className="text-[11px] text-gray-400 mb-2 leading-relaxed">{tmpl.description}</p>
+                      <h4 className="font-extrabold text-white text-sm mb-1">{tmpl.name}</h4>
+                      <p className="text-[11px] text-indigo-400 font-medium line-clamp-1 mb-2.5">{tmpl.subtitle}</p>
 
-                      <div className="space-y-1 mb-2">
-                        {tmpl.features.slice(0, 2).map((feat, idx) => (
-                          <div key={idx} className="flex items-center gap-1.5 text-[11px] text-gray-300">
-                            <span className="text-indigo-400 font-bold">•</span>
-                            <span>{feat}</span>
-                          </div>
-                        ))}
+                      {/* Visual Resume Output Preview with Dummy Credentials */}
+                      <div className="rounded-xl overflow-hidden border border-gray-800 bg-gray-950 p-1 mb-2">
+                        <TemplateVisualPreview
+                          templateId={tmpl.id}
+                          templateName={tmpl.name}
+                          compact
+                          userPhotoUrl={tailoredResume?.contact?.photoUrl || session?.user?.image || undefined}
+                        />
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-gray-800/60 text-[10px] text-gray-500">
-                      Ideal for: <span className="text-gray-400">{tmpl.recommendedFor.split(",").slice(0, 3).join(", ")}</span>
+                    <div className="pt-2 border-t border-gray-800/60 flex items-center justify-between text-[11px]">
+                      <span className={isSelected ? "font-bold text-indigo-400" : "text-gray-500"}>
+                        {isSelected ? "✓ Selected Blueprint" : "Click to select"}
+                      </span>
+                      <span className="text-[10px] text-gray-500">{tmpl.category}</span>
                     </div>
                   </div>
                 );

@@ -75,6 +75,7 @@ export async function updatePersonalInfo(data: {
   fullName: string;
   headline: string;
   summary: string;
+  photoUrl?: string;
   email?: string;
   phone?: string;
   countryCode?: string;
@@ -114,6 +115,7 @@ export async function updatePersonalInfo(data: {
       fullName: data.fullName,
       headline: data.headline,
       summary: data.summary,
+      photoUrl: data.photoUrl !== undefined ? data.photoUrl : existing.photoUrl,
       email: data.email,
       phone: data.phone,
       countryCode: data.countryCode || "+91",
@@ -127,6 +129,13 @@ export async function updatePersonalInfo(data: {
       completionScore: score,
     },
   });
+
+  if (data.photoUrl) {
+    await db.user.update({
+      where: { id: session.user.id },
+      data: { image: data.photoUrl },
+    });
+  }
 
   revalidatePath("/dashboard/profile");
   return { success: true, data: updated };

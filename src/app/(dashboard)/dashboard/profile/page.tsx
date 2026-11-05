@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   getProfileData,
   updatePersonalInfo,
@@ -38,6 +38,9 @@ import {
   Phone,
   Calendar,
   ChevronDown,
+  Camera,
+  Upload,
+  Image as ImageIcon,
 } from "lucide-react";
 
 export default function CareerProfilePage() {
@@ -47,7 +50,10 @@ export default function CareerProfilePage() {
   const [savingPersonal, setSavingPersonal] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  // 1. Personal Info State (including Country Code, Phone, DOB, Gender)
+  // 1. Personal Info State (including Country Code, Phone, DOB, Gender, Passport Photo)
+  const [photoUrl, setPhotoUrl] = useState("");
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [fullName, setFullName] = useState("");
   const [headline, setHeadline] = useState("");
   const [summary, setSummary] = useState("");
@@ -113,6 +119,7 @@ export default function CareerProfilePage() {
     const data = await getProfileData();
     if (data) {
       setProfile(data);
+      setPhotoUrl(data.photoUrl || "");
       setFullName(data.fullName || "");
       setHeadline(data.headline || "");
       setSummary(data.summary || "");
@@ -147,6 +154,7 @@ export default function CareerProfilePage() {
         fullName,
         headline,
         summary,
+        photoUrl: photoUrl || undefined,
         email,
         countryCode,
         phone,
@@ -159,7 +167,7 @@ export default function CareerProfilePage() {
         targetRoles,
       });
       if (res.success) {
-        setMessage({ type: "success", text: "Personal & demographic information saved successfully!" });
+        setMessage({ type: "success", text: "Personal details & passport photo saved successfully!" });
         await refreshProfile();
       }
     } catch (err: any) {
@@ -167,6 +175,29 @@ export default function CareerProfilePage() {
     } finally {
       setSavingPersonal(false);
     }
+  };
+
+  const handlePhotoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 3 * 1024 * 1024) {
+      setMessage({ type: "error", text: "Photo is larger than 3MB. Please upload a smaller photo." });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setPhotoUrl(reader.result);
+        setMessage({ type: "success", text: "Passport photo loaded! Click 'Save Information' below to persist." });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemovePhoto = () => {
+    setPhotoUrl("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    setMessage({ type: "success", text: "Passport photo removed. Click 'Save Information' to persist changes." });
   };
 
   const handleAddTargetRole = (e: React.FormEvent) => {
@@ -447,6 +478,103 @@ export default function CareerProfilePage() {
               {savingPersonal ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
               <span>Save Information</span>
             </button>
+          </div>
+
+          {/* ── PASSPORT SIZE PHOTO UPLOAD SECTION ── */}
+          <div className="p-5 rounded-2xl bg-gray-950/70 border border-gray-800 flex flex-col sm:flex-row items-center sm:items-start gap-6">
+            {/* Passport Photo Frame (3.5 : 4.5 Ratio) */}
+            <div className="shrink-0 flex flex-col items-center">
+              <div
+                className="w-28 h-36 rounded-xl border-2 border-dashed border-indigo-500/50 bg-gray-900 overflow-hidden flex items-center justify-center relative shadow-lg"
+                style={{ aspectRatio: "3.5 / 4.5" }}
+              >
+                {photoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={photoUrl}
+                    alt="Passport Photo Preview"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="text-center p-3 text-gray-500 flex flex-col items-center">
+                    <Camera className="w-8 h-8 text-gray-600 mb-1.5" />
+                    <span className="text-[10px] font-semibold text-gray-400">Passport Photo</span>
+                    <span className="text-[8px] text-gray-500 mt-0.5">Not set</span>
+                  </div>
+                )}
+              </div>
+              <span className="text-[10px] font-bold text-gray-400 mt-2 uppercase tracking-wider">
+                3.5cm × 4.5cm
+              </span>
+            </div>
+
+            {/* Upload Controls & Guidance */}
+            <div className="flex-1 space-y-3 text-center sm:text-left">
+              <div>
+                <div className="flex items-center gap-2 justify-center sm:justify-start">
+                  <h3 className="text-sm font-bold text-white">Passport Size Photograph</h3>
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-800/80 text-emerald-300 font-semibold">
+                    {photoUrl ? "✓ Photo Attached" : "Photo Recommended"}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-400 mt-1.5 leading-relaxed">
+                  Upload a standard passport-format photo. If you select any template that recommends or supports photos (e.g. Modern Executive with Photo / International CVs), your photo will automatically be positioned and framed in the output!
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handlePhotoFileChange}
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-md shadow-indigo-600/20"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>{photoUrl ? "Change Photo" : "Upload Passport Photo"}</span>
+                </button>
+
+                {photoUrl && (
+                  <button
+                    type="button"
+                    onClick={handleRemovePhoto}
+                    className="px-3 py-2 rounded-xl bg-gray-900 hover:bg-red-950/60 border border-gray-800 hover:border-red-800/60 text-red-400 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Remove Photo</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setShowUrlInput(!showUrlInput)}
+                  className="px-3 py-2 rounded-xl bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 text-xs font-medium transition cursor-pointer"
+                >
+                  {showUrlInput ? "Hide URL Input" : "Paste Image URL"}
+                </button>
+              </div>
+
+              {showUrlInput && (
+                <div className="pt-2">
+                  <label className="block text-[11px] font-medium text-gray-400 mb-1">
+                    Direct Image URL (HTTPS)
+                  </label>
+                  <input
+                    type="url"
+                    value={photoUrl}
+                    onChange={(e) => setPhotoUrl(e.target.value)}
+                    placeholder="https://example.com/my-passport-photo.jpg"
+                    className="w-full px-3 py-2 rounded-xl bg-gray-900 border border-gray-800 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Row 1: Full Name & Headline */}

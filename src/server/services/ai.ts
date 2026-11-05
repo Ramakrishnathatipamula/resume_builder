@@ -14,6 +14,7 @@ export interface CandidateProfileData {
     websiteUrl?: string | null;
     githubUrl?: string | null;
     linkedinUrl?: string | null;
+    photoUrl?: string | null;
   };
   skills: string[];
   softSkills: string[];
@@ -120,6 +121,7 @@ export interface TailoredResumeResult {
     linkedin: string;
     github: string;
     website: string;
+    photoUrl?: string;
   };
   skills: string[];
   educations: Array<{
@@ -327,6 +329,11 @@ ${input.layoutRules}
    - Escape all LaTeX special characters: & as \\&, % as \\%, _ as \\_, # as \\$, $ as \\$.
    - Ensure all JSON backslashes in latexSource are properly escaped so the output is strictly valid JSON.
 
+5. PASSPORT PHOTO INTEGRATION:
+   - Candidate Photo: ${input.candidate.contact.photoUrl ? "PROVIDED" : "NONE"}
+   - If candidate photo is provided and the template supports/recommends a photo, format the header to cleanly incorporate the passport photo frame.
+   - In the JSON output, always set "contact.photoUrl" to "${input.candidate.contact.photoUrl || ""}".
+
 Return JSON conforming EXACTLY to:
 {
   "title": "${input.candidate.name} - ${input.selectedTemplate.name}",
@@ -339,7 +346,8 @@ Return JSON conforming EXACTLY to:
     "location": "${input.candidate.contact.location || ""}",
     "linkedin": "${input.candidate.contact.linkedinUrl || ""}",
     "github": "${input.candidate.contact.githubUrl || ""}",
-    "website": "${input.candidate.contact.websiteUrl || ""}"
+    "website": "${input.candidate.contact.websiteUrl || ""}",
+    "photoUrl": "${input.candidate.contact.photoUrl || ""}"
   },
   "skills": ["string"],
   "educations": [
@@ -397,6 +405,7 @@ Return JSON conforming EXACTLY to:
       linkedin: candidate.contact.linkedinUrl || "",
       github: candidate.contact.githubUrl || "",
       website: candidate.contact.websiteUrl || "",
+      photoUrl: candidate.contact.photoUrl || undefined,
     };
   } else {
     if (!parsed.contact.name || parsed.contact.name.toLowerCase().includes("aspiring") || parsed.contact.name.toLowerCase().includes("engineer")) {
@@ -408,6 +417,7 @@ Return JSON conforming EXACTLY to:
     if (!parsed.contact.linkedin) parsed.contact.linkedin = candidate.contact.linkedinUrl || "";
     if (!parsed.contact.github) parsed.contact.github = candidate.contact.githubUrl || "";
     if (!parsed.contact.website) parsed.contact.website = candidate.contact.websiteUrl || "";
+    if (!parsed.contact.photoUrl && candidate.contact.photoUrl) parsed.contact.photoUrl = candidate.contact.photoUrl;
   }
 
   // 2. Education: Ensure candidate education is NEVER omitted

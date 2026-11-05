@@ -9,6 +9,8 @@ import {
   saveCustomTemplate,
   deleteCustomTemplate,
 } from "@/lib/templates-data";
+import { getProfileData } from "@/server/actions/profile";
+import { TemplateVisualPreview } from "@/components/template-visual-preview";
 import {
   Sparkles,
   Check,
@@ -20,6 +22,8 @@ import {
   Info,
   X,
   FileText,
+  Eye,
+  Maximize2,
 } from "lucide-react";
 
 export default function TemplatesPage() {
@@ -28,6 +32,8 @@ export default function TemplatesPage() {
   const [selectedTemplate, setSelectedTemplate] = useState("jakes-tech");
   const [savedDefault, setSavedDefault] = useState<string>("jakes-tech");
   const [justSaved, setJustSaved] = useState(false);
+  const [userPhoto, setUserPhoto] = useState<string | undefined>(undefined);
+  const [previewModalTemplate, setPreviewModalTemplate] = useState<ResumeTemplate | null>(null);
 
   // Custom Template Modal State
   const [showAddModal, setShowAddModal] = useState(false);
@@ -37,7 +43,7 @@ export default function TemplatesPage() {
   const [customLatexCode, setCustomLatexCode] = useState("");
   const [modalError, setModalError] = useState("");
 
-  const loadTemplates = () => {
+  const loadTemplates = async () => {
     const custom = getStoredCustomTemplates();
     setCustomTemplates(custom);
 
@@ -45,6 +51,15 @@ export default function TemplatesPage() {
     if (saved) {
       setSelectedTemplate(saved);
       setSavedDefault(saved);
+    }
+
+    try {
+      const profile = await getProfileData();
+      if (profile?.photoUrl) {
+        setUserPhoto(profile.photoUrl);
+      }
+    } catch {
+      // ignore
     }
   };
 
@@ -154,7 +169,7 @@ export default function TemplatesPage() {
         </div>
       </div>
 
-      {/* Templates Grid */}
+      {/* Templates Grid with Visual Resume Output Previews */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {allTemplates.map((tmpl) => {
           const isSelected = selectedTemplate === tmpl.id;
@@ -171,7 +186,7 @@ export default function TemplatesPage() {
           return (
             <div
               key={tmpl.id}
-              className={`p-6 rounded-2xl bg-gray-900/70 border transition flex flex-col justify-between ${
+              className={`p-5 rounded-2xl bg-gray-900/80 border transition flex flex-col justify-between ${
                 isSelected
                   ? "border-indigo-500 shadow-2xl shadow-indigo-600/10 ring-1 ring-indigo-500/50"
                   : "border-gray-800 hover:border-gray-700"
@@ -179,11 +194,16 @@ export default function TemplatesPage() {
             >
               <div>
                 {/* Header row */}
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider border ${badgeStyles}`}>
                       {tmpl.badge}
                     </span>
+                    {tmpl.hasPhoto && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-teal-950 border border-teal-800 text-teal-300 font-semibold">
+                        📷 Photo Frame
+                      </span>
+                    )}
                     {isCustom && (
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-950/80 border border-purple-800/80 text-purple-300 font-semibold">
                         Custom User Code
@@ -210,56 +230,133 @@ export default function TemplatesPage() {
                   </div>
                 </div>
 
-                <h3 className="text-xl font-bold text-white mb-1">{tmpl.name}</h3>
-                <p className="text-xs text-indigo-400 font-medium mb-3">{tmpl.subtitle}</p>
-                <p className="text-xs text-gray-400 leading-relaxed mb-5">{tmpl.description}</p>
-
-                {/* Best for */}
-                <div className="p-3 rounded-xl bg-gray-950/70 border border-gray-800/80 mb-5">
-                  <span className="text-[11px] font-semibold text-gray-300 block mb-0.5">
-                    🎯 Best suited for:
-                  </span>
-                  <span className="text-xs text-gray-400">{tmpl.recommendedFor}</span>
+                <div className="mb-3">
+                  <h3 className="text-lg font-extrabold text-white">{tmpl.name}</h3>
+                  <p className="text-xs text-indigo-400 font-medium line-clamp-1">{tmpl.subtitle}</p>
                 </div>
 
-                {/* Feature bullets */}
-                <div className="space-y-2 mb-6">
-                  {tmpl.features.map((feat, idx) => (
-                    <div key={idx} className="flex items-start gap-2 text-xs text-gray-300">
-                      <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                      <span>{feat}</span>
+                {/* ── VISUAL RESUME OUTPUT PREVIEW WITH DUMMY CREDENTIALS ── */}
+                <div
+                  onClick={() => setPreviewModalTemplate(tmpl)}
+                  className="relative group rounded-xl overflow-hidden cursor-pointer border border-gray-700/80 bg-gray-950 p-2 shadow-inner hover:border-indigo-500 transition mb-4"
+                  title="Click to zoom / view full output"
+                >
+                  <TemplateVisualPreview
+                    templateId={tmpl.id}
+                    templateName={tmpl.name}
+                    compact
+                    userPhotoUrl={userPhoto}
+                  />
+
+                  {/* Hover Overlay */}
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 backdrop-blur-[2px] transition flex flex-col items-center justify-center gap-2 text-white p-4">
+                    <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-600/50">
+                      <Maximize2 className="w-5 h-5 text-white" />
                     </div>
-                  ))}
+                    <span className="text-xs font-bold tracking-wide">Click to Enlarge Preview</span>
+                    <span className="text-[10px] text-gray-300 text-center">Inspect complete layout, fonts & dummy data</span>
+                  </div>
                 </div>
               </div>
 
               {/* Actions row */}
-              <div className="grid grid-cols-2 gap-3 pt-4 border-t border-gray-800/70">
-                <button
-                  type="button"
-                  onClick={() => handleSetDefault(tmpl.id)}
-                  className={`py-2.5 px-3 rounded-xl text-xs font-semibold transition border cursor-pointer ${
-                    isDefault
-                      ? "bg-emerald-950/40 border-emerald-800/60 text-emerald-300"
-                      : "bg-gray-950 hover:bg-gray-800 border-gray-800 text-gray-300"
-                  }`}
-                >
-                  {isDefault ? "✓ Active Default" : "Set as Default"}
-                </button>
+              <div className="space-y-2 pt-3 border-t border-gray-800/70">
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSetDefault(tmpl.id)}
+                    className={`py-2 px-3 rounded-xl text-xs font-semibold transition border cursor-pointer ${
+                      isDefault
+                        ? "bg-emerald-950/40 border-emerald-800/60 text-emerald-300"
+                        : "bg-gray-950 hover:bg-gray-800 border-gray-800 text-gray-300"
+                    }`}
+                  >
+                    {isDefault ? "✓ Active Default" : "Set as Default"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleUseToGenerate(tmpl.id)}
+                    className="py-2 px-3 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/30 transition cursor-pointer"
+                  >
+                    <span>Use Template</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
 
                 <button
                   type="button"
-                  onClick={() => handleUseToGenerate(tmpl.id)}
-                  className="py-2.5 px-3 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/30 transition cursor-pointer"
+                  onClick={() => setPreviewModalTemplate(tmpl)}
+                  className="w-full py-1.5 px-3 rounded-xl text-xs text-gray-400 hover:text-white bg-gray-950/60 hover:bg-gray-850 border border-gray-800/60 flex items-center justify-center gap-1.5 transition cursor-pointer"
                 >
-                  <span>Use Template</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <Eye className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>View Full Output Preview</span>
                 </button>
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* ════════════════════════════════════════════════════════════ */}
+      {/* FULL RESUME OUTPUT PREVIEW MODAL                             */}
+      {/* ════════════════════════════════════════════════════════════ */}
+      {previewModalTemplate && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in">
+          <div className="w-full max-w-3xl my-6 rounded-3xl bg-gray-900 border border-gray-800 shadow-2xl overflow-hidden space-y-4">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-gray-800 flex items-center justify-between bg-gray-950">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-white">{previewModalTemplate.name}</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-950 border border-indigo-800 text-indigo-300 font-semibold">
+                    {previewModalTemplate.badge}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-400 mt-0.5">{previewModalTemplate.subtitle}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewModalTemplate(null)}
+                className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-gray-850 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Document Canvas */}
+            <div className="p-6 max-h-[75vh] overflow-y-auto flex justify-center bg-gray-950/80">
+              <div className="w-full max-w-2xl">
+                <TemplateVisualPreview
+                  templateId={previewModalTemplate.id}
+                  templateName={previewModalTemplate.name}
+                  compact={false}
+                  userPhotoUrl={userPhoto}
+                />
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="p-4 border-t border-gray-800 flex items-center justify-between bg-gray-950">
+              <button
+                type="button"
+                onClick={() => handleSetDefault(previewModalTemplate.id)}
+                className="px-4 py-2 rounded-xl bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 text-xs font-semibold transition cursor-pointer"
+              >
+                {savedDefault === previewModalTemplate.id ? "✓ Active Default" : "Set as Default"}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleUseToGenerate(previewModalTemplate.id)}
+                className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition cursor-pointer"
+              >
+                <span>Use This Template</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ════════════════════════════════════════════════════════════ */}
       {/* ADD CUSTOM LATEX TEMPLATE MODAL                              */}

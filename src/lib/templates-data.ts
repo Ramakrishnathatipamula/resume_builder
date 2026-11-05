@@ -11,6 +11,7 @@ export interface ResumeTemplate {
   recommendedFor: string;
   features: string[];
   latexGuidelines: string;
+  hasPhoto?: boolean;
 }
 
 const formattedUserTemplates: ResumeTemplate[] = (USER_CUSTOM_TEMPLATES || []).map((t) => ({
@@ -32,6 +33,29 @@ const formattedUserTemplates: ResumeTemplate[] = (USER_CUSTOM_TEMPLATES || []).m
 
 export const RESUME_TEMPLATES: ResumeTemplate[] = [
   ...formattedUserTemplates,
+  {
+    id: "modern-photo",
+    name: "Modern Executive with Photo (International / European)",
+    subtitle: "Two-column executive header with passport-size photo frame & modern typography",
+    category: "International & Executive",
+    badge: "Photo Recommended",
+    badgeColor: "emerald",
+    hasPhoto: true,
+    description: "Tailored for European, Middle Eastern, Asian, and executive CV formats where a formal professional passport photo is required. Clean two-column header with candidate details on the left and passport photo on the right.",
+    recommendedFor: "International Roles, European CV (Europass style), Executive Leadership, Consulting",
+    features: [
+      "Dedicated passport-size photo frame in header",
+      "Standard European & International CV compliant",
+      "Crisp section dividers with highlighted credentials",
+      "Full ATS readability with dual-format export",
+    ],
+    latexGuidelines: `
+Use modern CV layout with photo support: \\usepackage{graphicx}, \\usepackage[margin=0.6in]{geometry}.
+Header includes a minipage: candidate name and contacts on the left (0.75\\textwidth), and passport photo on the right (0.22\\textwidth) using \\includegraphics[width=2.5cm,height=3.2cm]{photo}.
+Section headings use colored accent bar with clean horizontal separation.
+Experience highlights leadership achievements, metrics, and cross-functional project delivery.
+`,
+  },
   {
     id: "jakes-tech",
     name: "Jake's Modern Tech (FAANG Standard)",

@@ -306,17 +306,39 @@ export default function ResumeHistoryPage() {
                 ) : c ? (
                   <div className="space-y-5 text-gray-200">
                     {/* Contact Header */}
-                    <div className="border-b border-gray-800 pb-4 text-center sm:text-left">
-                      <h2 className="text-2xl font-black text-white">{c.contact?.name || viewingResume.targetRole}</h2>
-                      <p className="text-xs text-indigo-400 font-bold mt-0.5 uppercase tracking-wider">{c.targetRole || viewingResume.targetRole}</p>
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400 mt-2">
-                        {c.contact?.email && <span className="flex items-center gap-1"><Mail className="w-3 h-3 text-gray-500" />{c.contact.email}</span>}
-                        {c.contact?.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3 text-gray-500" />{c.contact.phone}</span>}
-                        {c.contact?.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3 text-gray-500" />{c.contact.location}</span>}
-                        {c.contact?.linkedin && <span className="flex items-center gap-1 text-indigo-400"><Linkedin className="w-3 h-3" />{c.contact.linkedin}</span>}
-                        {c.contact?.github && <span className="flex items-center gap-1 text-indigo-400"><Github className="w-3 h-3" />{c.contact.github}</span>}
+                    <div className="border-b border-gray-800 pb-4 flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4">
+                      <div className="text-center sm:text-left flex-1">
+                        <h2 className="text-2xl font-black text-white">{c.contact?.name || viewingResume.targetRole}</h2>
+                        <p className="text-xs text-indigo-400 font-bold mt-0.5 uppercase tracking-wider">{c.targetRole || viewingResume.targetRole}</p>
+                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 text-xs text-gray-400 mt-2">
+                          {c.contact?.email && <span className="flex items-center gap-1"><Mail className="w-3 h-3 text-gray-500" />{c.contact.email}</span>}
+                          {c.contact?.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3 text-gray-500" />{c.contact.phone}</span>}
+                          {c.contact?.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3 text-gray-500" />{c.contact.location}</span>}
+                          {c.contact?.linkedin && <span className="flex items-center gap-1 text-indigo-400"><Linkedin className="w-3 h-3" />{c.contact.linkedin}</span>}
+                          {c.contact?.github && <span className="flex items-center gap-1 text-indigo-400"><Github className="w-3 h-3" />{c.contact.github}</span>}
+                        </div>
+                        {c.summary && <p className="text-xs text-gray-300 mt-3 leading-relaxed">{c.summary}</p>}
                       </div>
-                      {c.summary && <p className="text-xs text-gray-300 mt-3 leading-relaxed">{c.summary}</p>}
+
+                      {/* Passport Photo Frame (if photoUrl present) */}
+                      {c.contact?.photoUrl && (
+                        <div className="shrink-0 flex flex-col items-center">
+                          <div
+                            className="w-20 h-26 rounded-lg border-2 border-indigo-500/40 overflow-hidden shadow-md bg-gray-900"
+                            style={{ aspectRatio: "3.5 / 4.5" }}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={c.contact.photoUrl}
+                              alt="Passport Photograph"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <span className="text-[9px] font-bold text-gray-500 uppercase mt-1">
+                            Passport Photo
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Education */}

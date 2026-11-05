@@ -90,6 +90,7 @@ model Profile {
   dob             DateTime?
   gender          String?
   location        String?
+  photoUrl        String?
   websiteUrl      String?
   githubUrl       String?
   linkedinUrl     String?

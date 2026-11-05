@@ -56,6 +56,7 @@ async function getFullCandidateData(userId: string, sessionUser: any): Promise<{
       websiteUrl: profile.websiteUrl,
       githubUrl: profile.githubUrl,
       linkedinUrl: profile.linkedinUrl,
+      photoUrl: profile.photoUrl || sessionUser.image || null,
     },
     skills: profile.skills
       .filter((s) => s.category === "TECHNICAL" || s.category === "TOOL" || s.category === "LANGUAGE")
