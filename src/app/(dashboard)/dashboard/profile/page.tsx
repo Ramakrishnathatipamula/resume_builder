@@ -508,18 +508,13 @@ export default function CareerProfilePage() {
               </span>
             </div>
 
-            {/* Upload Controls & Guidance */}
+            {/* Upload Controls */}
             <div className="flex-1 space-y-3 text-center sm:text-left">
-              <div>
-                <div className="flex items-center gap-2 justify-center sm:justify-start">
-                  <h3 className="text-sm font-bold text-white">Passport Size Photograph</h3>
-                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-800/80 text-emerald-300 font-semibold">
-                    {photoUrl ? "✓ Photo Attached" : "Photo Recommended"}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-400 mt-1.5 leading-relaxed">
-                  Upload a standard passport-format photo. If you select any template that recommends or supports photos (e.g. Modern Executive with Photo / International CVs), your photo will automatically be positioned and framed in the output!
-                </p>
+              <div className="flex items-center gap-2 justify-center sm:justify-start">
+                <h3 className="text-sm font-bold text-white">Passport Size Photograph</h3>
+                <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-800/80 text-emerald-300 font-semibold">
+                  {photoUrl ? "✓ Photo Attached" : "Photo Recommended"}
+                </span>
               </div>
 
               {/* Action Buttons */}
