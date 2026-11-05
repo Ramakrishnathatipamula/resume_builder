@@ -154,21 +154,6 @@ export default function HomePage() {
               Sign In to Dashboard
             </Link>
           </div>
-
-          {/* Trust badges */}
-          <div className="flex flex-wrap justify-center gap-6 text-xs text-gray-500">
-            {[
-              "Zero AI Hallucination",
-              "Multi-Tenant Data Isolation",
-              "LaTeX + Overleaf Export",
-              "Weighted ATS Scoring",
-            ].map((badge) => (
-              <span key={badge} className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                {badge}
-              </span>
-            ))}
-          </div>
         </div>
       </section>
 
