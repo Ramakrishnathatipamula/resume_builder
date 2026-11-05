@@ -11,10 +11,6 @@ import {
   LogOut,
   Sparkles,
   Loader2,
-  FileText,
-  Briefcase,
-  BookOpen,
-  Map,
 } from "lucide-react";
 
 export default function DashboardLayout({
@@ -33,11 +29,8 @@ export default function DashboardLayout({
 
   const navItems = [
     { name: "Career Profile", href: "/dashboard/profile", icon: User },
-    { name: "Job Intelligence", href: "/dashboard/jobs", icon: FileText },
     { name: "Resume Templates", href: "/dashboard/templates", icon: LayoutTemplate },
-    { name: "Resume History", href: "/dashboard/history", icon: History },
-    { name: "Learning Roadmap", href: "/dashboard/roadmap", icon: BookOpen },
-    { name: "Application Tracker", href: "/dashboard/applications", icon: Briefcase },
+    { name: "History of Generated Resumes", href: "/dashboard/history", icon: History },
     { name: "Interview Preparation", href: "/dashboard/interview", icon: Video },
   ];
 
