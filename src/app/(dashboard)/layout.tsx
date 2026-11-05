@@ -13,6 +13,8 @@ import {
   Loader2,
   FileText,
   Briefcase,
+  BookOpen,
+  Map,
 } from "lucide-react";
 
 export default function DashboardLayout({
@@ -34,6 +36,7 @@ export default function DashboardLayout({
     { name: "Job Intelligence", href: "/dashboard/jobs", icon: FileText },
     { name: "Resume Templates", href: "/dashboard/templates", icon: LayoutTemplate },
     { name: "Resume History", href: "/dashboard/history", icon: History },
+    { name: "Learning Roadmap", href: "/dashboard/roadmap", icon: BookOpen },
     { name: "Application Tracker", href: "/dashboard/applications", icon: Briefcase },
     { name: "Interview Preparation", href: "/dashboard/interview", icon: Video },
   ];
