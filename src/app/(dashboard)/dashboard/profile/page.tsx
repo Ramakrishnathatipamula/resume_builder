@@ -491,34 +491,75 @@ export default function CareerProfilePage() {
 
           {/* ── PASSPORT SIZE PHOTO UPLOAD SECTION ── */}
           <div className="p-5 rounded-2xl bg-gray-950/70 border border-gray-800 flex flex-col sm:flex-row items-center sm:items-start gap-6">
-            {/* Passport Photo Frame (3.5 : 4.5 Ratio) */}
+            {/* Hidden File Input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handlePhotoFileChange}
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+            />
+
+            {/* Passport Photo Frame (3.5 : 4.5 Ratio) with Direct Click-to-Upload */}
             <div className="shrink-0 flex flex-col items-center">
               <div
-                className="w-28 h-36 rounded-xl border-2 border-dashed border-indigo-500/50 bg-gray-900 overflow-hidden flex items-center justify-center relative shadow-lg"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-32 h-40 rounded-xl border-2 border-dashed border-indigo-500/60 hover:border-indigo-400 bg-gray-900 overflow-hidden flex flex-col items-center justify-center relative shadow-lg cursor-pointer group transition-all duration-200 hover:scale-[1.02]"
                 style={{ aspectRatio: "3.5 / 4.5" }}
+                title="Click to select passport photo"
               >
                 {photoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={photoUrl}
-                    alt="Passport Photo Preview"
-                    className="w-full h-full object-cover"
-                  />
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={photoUrl}
+                      alt="Passport Photo Preview"
+                      className="w-full h-full object-cover"
+                    />
+                    {/* Hover Overlay with Fingerpoint */}
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 text-white p-2 text-center">
+                      <Camera className="w-6 h-6 text-indigo-300" />
+                      <span className="text-[10px] font-bold bg-indigo-600 px-2 py-0.5 rounded-full shadow">
+                        Change Photo
+                      </span>
+                      <span className="text-[8px] text-gray-300">Click to replace</span>
+                    </div>
+
+                    {/* Quick Remove Button */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemovePhoto();
+                      }}
+                      className="absolute top-1.5 right-1.5 p-1 rounded-full bg-red-950/90 hover:bg-red-800 border border-red-700/80 text-red-300 hover:text-white transition shadow z-10 cursor-pointer"
+                      title="Remove photo"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </>
                 ) : (
-                  <div className="text-center p-3 text-gray-500 flex flex-col items-center">
-                    <Camera className="w-8 h-8 text-gray-600 mb-1.5" />
-                    <span className="text-[10px] font-semibold text-gray-400">Passport Photo</span>
-                    <span className="text-[8px] text-gray-500 mt-0.5">Not set</span>
+                  <div className="text-center p-3 flex flex-col items-center justify-center gap-2 group-hover:text-indigo-300 transition">
+                    <div className="w-10 h-10 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center group-hover:bg-indigo-600/30 group-hover:border-indigo-400 transition">
+                      <Camera className="w-5 h-5 text-indigo-400 group-hover:text-white transition" />
+                    </div>
+                    {/* Upload Photo Badge directly inside border lines */}
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-indigo-600 group-hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/30 transition">
+                      Upload Photo
+                    </span>
+                    <span className="text-[8px] text-gray-400 group-hover:text-gray-300">
+                      Click to choose image
+                    </span>
                   </div>
                 )}
               </div>
-              <span className="text-[10px] font-bold text-gray-400 mt-2 uppercase tracking-wider">
+              <span className="text-[9px] font-semibold text-gray-500 mt-1.5 uppercase tracking-wider">
                 3.5cm × 4.5cm
               </span>
             </div>
 
-            {/* Upload Controls */}
-            <div className="flex-1 space-y-3 text-center sm:text-left">
+            {/* Upload Controls & Details */}
+            <div className="flex-1 space-y-3 text-center sm:text-left self-center">
               <div className="flex items-center gap-2 justify-center sm:justify-start">
                 <h3 className="text-sm font-bold text-white">Passport Size Photograph</h3>
                 <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-800/80 text-emerald-300 font-semibold">
@@ -528,13 +569,6 @@ export default function CareerProfilePage() {
 
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handlePhotoFileChange}
-                  accept="image/png,image/jpeg,image/webp"
-                  className="hidden"
-                />
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
@@ -565,7 +599,7 @@ export default function CareerProfilePage() {
               </div>
 
               {showUrlInput && (
-                <div className="pt-2">
+                <div className="pt-1">
                   <label className="block text-[11px] font-medium text-gray-400 mb-1">
                     Direct Image URL (HTTPS)
                   </label>
