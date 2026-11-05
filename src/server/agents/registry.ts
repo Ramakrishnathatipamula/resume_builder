@@ -178,3 +178,4 @@ export function getAgentById(id: AgentId): AgentDefinition {
 export function getAllAgents(): AgentDefinition[] {
   return Object.values(AGENT_REGISTRY);
 }
+

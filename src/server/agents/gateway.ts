@@ -152,3 +152,4 @@ export class ModelGateway {
 }
 
 export const modelGateway = ModelGateway.getInstance();
+
