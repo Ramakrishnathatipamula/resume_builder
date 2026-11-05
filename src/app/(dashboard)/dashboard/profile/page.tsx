@@ -168,6 +168,9 @@ export default function CareerProfilePage() {
       });
       if (res.success) {
         setMessage({ type: "success", text: "Personal details & passport photo saved successfully!" });
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("profilePhotoUpdated", { detail: photoUrl }));
+        }
         await refreshProfile();
       }
     } catch (err: any) {
@@ -188,6 +191,9 @@ export default function CareerProfilePage() {
     reader.onload = () => {
       if (typeof reader.result === "string") {
         setPhotoUrl(reader.result);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("profilePhotoUpdated", { detail: reader.result }));
+        }
         setMessage({ type: "success", text: "Passport photo loaded! Click 'Save Information' below to persist." });
       }
     };
@@ -197,6 +203,9 @@ export default function CareerProfilePage() {
   const handleRemovePhoto = () => {
     setPhotoUrl("");
     if (fileInputRef.current) fileInputRef.current.value = "";
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("profilePhotoUpdated", { detail: "" }));
+    }
     setMessage({ type: "success", text: "Passport photo removed. Click 'Save Information' to persist changes." });
   };
 

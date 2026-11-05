@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut, useSession } from "@/lib/auth-client";
+import { getProfileData } from "@/server/actions/profile";
 import {
   User,
   LayoutTemplate,
@@ -21,6 +23,26 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const { data: session, isPending } = useSession();
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (session?.user?.image) {
+      setProfilePhoto(session.user.image);
+    }
+    getProfileData()
+      .then((data) => {
+        if (data?.photoUrl) {
+          setProfilePhoto(data.photoUrl);
+        }
+      })
+      .catch(() => {});
+
+    const onPhotoUpdate = (e: any) => {
+      setProfilePhoto(e.detail || null);
+    };
+    window.addEventListener("profilePhotoUpdated", onPhotoUpdate);
+    return () => window.removeEventListener("profilePhotoUpdated", onPhotoUpdate);
+  }, [session?.user]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -55,10 +77,19 @@ export default function DashboardLayout({
       {/* Sidebar Navigation */}
       <aside className="w-72 border-r border-gray-800/80 bg-gray-950/80 p-5 flex flex-col justify-between hidden md:flex shrink-0">
         <div>
-          {/* Logo / Brand clickable to Home / Job Analyzer */}
-          <Link href="/dashboard" className="flex items-center gap-2.5 px-2 mb-8 group">
-            <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center font-bold text-white text-lg shadow-lg shadow-indigo-600/30 group-hover:bg-indigo-500 transition">
-              C
+          {/* Logo / Brand with Profile Picture at Left Corner */}
+          <Link href="/dashboard" className="flex items-center gap-3 px-2 mb-8 group">
+            <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center font-bold text-white text-lg shadow-lg shadow-indigo-600/30 overflow-hidden shrink-0 border border-indigo-400/30 group-hover:border-indigo-400 group-hover:bg-indigo-500 transition">
+              {profilePhoto ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={profilePhoto}
+                  alt={session.user.name || "Profile Photo"}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span>C</span>
+              )}
             </div>
             <div>
               <span className="font-bold text-white tracking-tight block text-base group-hover:text-indigo-300 transition">CareerForge</span>
@@ -107,9 +138,23 @@ export default function DashboardLayout({
 
         {/* User Card & Logout */}
         <div className="pt-4 border-t border-gray-800/80">
-          <div className="px-3.5 py-3 rounded-xl bg-gray-900/70 border border-gray-800/70 mb-2">
-            <p className="text-xs font-semibold text-white truncate">{session.user.name}</p>
-            <p className="text-[11px] text-gray-400 truncate">{session.user.email}</p>
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-gray-900/70 border border-gray-800/70 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-indigo-600/80 flex items-center justify-center font-bold text-white text-xs overflow-hidden shrink-0">
+              {profilePhoto ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={profilePhoto}
+                  alt={session.user.name || "User"}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span>{session.user.name ? session.user.name.charAt(0).toUpperCase() : "U"}</span>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-white truncate">{session.user.name}</p>
+              <p className="text-[10px] text-gray-400 truncate">{session.user.email}</p>
+            </div>
           </div>
           <button
             onClick={handleSignOut}
