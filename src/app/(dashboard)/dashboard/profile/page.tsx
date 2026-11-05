@@ -55,7 +55,6 @@ export default function CareerProfilePage() {
   // 1. Personal Info State (including Country Code, Phone, DOB, Gender, Passport Photo)
   const [isEditingPersonal, setIsEditingPersonal] = useState(false);
   const [photoUrl, setPhotoUrl] = useState("");
-  const [showUrlInput, setShowUrlInput] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fullName, setFullName] = useState("");
   const [headline, setHeadline] = useState("");
@@ -641,66 +640,19 @@ export default function CareerProfilePage() {
               </span>
             </div>
 
-            {/* Upload Controls & Details */}
-            <div className="flex-1 space-y-3 text-center sm:text-left self-center">
+            {/* Details beside photo */}
+            <div className="flex-1 space-y-1.5 text-center sm:text-left self-center">
               <div className="flex items-center gap-2 justify-center sm:justify-start">
                 <h3 className="text-sm font-bold text-white">Passport Size Photograph</h3>
                 <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-800/80 text-emerald-300 font-semibold">
                   {photoUrl ? "✓ Photo Attached" : "Photo Recommended"}
                 </span>
               </div>
-
-              {/* Action Buttons (enabled only when editing) */}
-              {isEditingPersonal ? (
-                <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start animate-in fade-in">
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shadow-md shadow-indigo-600/20"
-                  >
-                    <Upload className="w-3.5 h-3.5" />
-                    <span>{photoUrl ? "Change Photo" : "Upload Passport Photo"}</span>
-                  </button>
-
-                  {photoUrl && (
-                    <button
-                      type="button"
-                      onClick={handleRemovePhoto}
-                      className="px-3 py-2 rounded-xl bg-gray-900 hover:bg-red-950/60 border border-gray-800 hover:border-red-800/60 text-red-400 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Remove Photo</span>
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => setShowUrlInput(!showUrlInput)}
-                    className="px-3 py-2 rounded-xl bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 text-xs font-medium transition cursor-pointer"
-                  >
-                    {showUrlInput ? "Hide URL Input" : "Paste Image URL"}
-                  </button>
-                </div>
-              ) : (
-                <p className="text-xs text-gray-500 italic">
-                  Passport photo is locked. Click <strong className="text-indigo-400">Edit</strong> above to upload or change photo.
-                </p>
-              )}
-
-              {isEditingPersonal && showUrlInput && (
-                <div className="pt-1">
-                  <label className="block text-[11px] font-medium text-gray-400 mb-1">
-                    Direct Image URL (HTTPS)
-                  </label>
-                  <input
-                    type="url"
-                    value={photoUrl}
-                    onChange={(e) => setPhotoUrl(e.target.value)}
-                    placeholder="https://example.com/my-passport-photo.jpg"
-                    className="w-full px-3 py-2 rounded-xl bg-gray-900 border border-gray-800 text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  />
-                </div>
-              )}
+              <p className="text-xs text-gray-400">
+                {isEditingPersonal
+                  ? "Click directly on the photo frame to upload or change your photo."
+                  : "Photo frame is locked. Click 'Edit' above to modify."}
+              </p>
             </div>
           </div>
 
