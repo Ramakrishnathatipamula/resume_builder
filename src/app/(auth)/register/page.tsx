@@ -33,7 +33,11 @@ export default function RegisterPage() {
       });
 
       if (res.error) {
-        setError(res.error.message || "Failed to create account. Please try again.");
+        const errorMsg =
+          res.error.message ||
+          (res.error as any).statusText ||
+          "Failed to create account. Please try again.";
+        setError(errorMsg);
       } else {
         router.push("/dashboard");
         router.refresh();

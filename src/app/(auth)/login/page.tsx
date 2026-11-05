@@ -25,7 +25,11 @@ export default function LoginPage() {
       });
 
       if (res.error) {
-        setError(res.error.message || "Failed to sign in. Please verify your credentials.");
+        const errorMsg =
+          res.error.message ||
+          (res.error as any).statusText ||
+          "Failed to sign in. Please verify your credentials.";
+        setError(errorMsg);
       } else {
         router.push("/dashboard");
         router.refresh();
