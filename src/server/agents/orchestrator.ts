@@ -2,6 +2,7 @@ import { AgentContext, AgentExecutionResult, AgentId } from "./types";
 import { getAgentById } from "./registry";
 import { modelGateway } from "./gateway";
 import { recordExecutionLog } from "./logger";
+import { checkRateLimit, sanitizePromptInput } from "../security";
 
 export class CentralOrchestrator {
   private static instance: CentralOrchestrator;
@@ -17,7 +18,7 @@ export class CentralOrchestrator {
 
   /**
    * Executes a specialized AI Agent through the central orchestrator
-   * with context boundaries, structured output parsing, metrics tracking, and audit logging.
+   * with rate limiting, prompt sanitization, context boundaries, structured output parsing, metrics tracking, and audit logging.
    */
   public async executeAgent<TInput = any, TOutput = any>(
     agentId: AgentId,
@@ -29,7 +30,40 @@ export class CentralOrchestrator {
     let retriesCount = 0;
     const maxRetries = context.options?.maxRetries ?? 2;
 
-    // Optional input validation
+    // 1. Rate limiting guard (per user if userId provided)
+    if (context.userId) {
+      const rateCheck = checkRateLimit(context.userId, 25, 60_000);
+      if (!rateCheck.allowed) {
+        const errorMsg = rateCheck.error || "Rate limit exceeded. Please wait a moment.";
+        recordExecutionLog({
+          agentId: agent.id,
+          agentName: agent.name,
+          timestamp: new Date().toISOString(),
+          success: false,
+          durationMs: 0,
+          modelUsed: "rate-limited",
+          estimatedTokens: 0,
+          error: errorMsg,
+        });
+
+        return {
+          agentId: agent.id,
+          agentName: agent.name,
+          version: agent.version,
+          success: false,
+          error: errorMsg,
+          metrics: {
+            durationMs: 0,
+            modelUsed: "rate-limited",
+            estimatedTokens: { input: 0, output: 0, total: 0 },
+            retriesCount: 0,
+          },
+          timestamp: new Date().toISOString(),
+        };
+      }
+    }
+
+    // 2. Optional input validation
     if (agent.inputValidator) {
       const validation = agent.inputValidator(context.data);
       if (!validation.valid) {
@@ -62,7 +96,13 @@ export class CentralOrchestrator {
       }
     }
 
-    const userPrompt = promptTemplate(context.data);
+    // 3. Prompt generation & injection sanitization
+    const rawUserPrompt = promptTemplate(context.data);
+    const { sanitized: userPrompt, hasSuspiciousContent } = sanitizePromptInput(rawUserPrompt);
+    if (hasSuspiciousContent) {
+      console.warn(`[SECURITY AUDIT] Neutralized prompt injection attempt during dispatch of ${agentId}`);
+    }
+
     let lastError: any = null;
 
     while (retriesCount <= maxRetries) {
