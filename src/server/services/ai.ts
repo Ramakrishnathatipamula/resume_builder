@@ -1,47 +1,5 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getTemplateById, ResumeTemplate } from "@/lib/templates-data";
-
-function getGenAI() {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GEMINI_APIKEY || "";
-  if (!apiKey) {
-    throw new Error(
-      "GEMINI_API_KEY is not configured in .env. Please add your Gemini API key."
-    );
-  }
-  return new GoogleGenerativeAI(apiKey);
-}
-
-const FALLBACK_MODELS = [
-  "gemini-3.1-flash-lite-preview",
-  "gemini-3.5-flash",
-  "gemini-3.5-flash-lite",
-  "gemini-flash-lite-latest",
-  "gemini-3.8-flash",
-];
-
-async function generateWithFallback(
-  prompt: string,
-  generationConfig?: any
-): Promise<string> {
-  const genAI = getGenAI();
-  let lastError: any = null;
-
-  for (const modelName of FALLBACK_MODELS) {
-    try {
-      const model = genAI.getGenerativeModel({
-        model: modelName,
-        generationConfig,
-      });
-      const response = await model.generateContent(prompt);
-      return response.response.text();
-    } catch (err: any) {
-      console.warn(`[CareerForge AI] Model ${modelName} failed, attempting next fallback:`, err?.message || err);
-      lastError = err;
-    }
-  }
-
-  throw lastError || new Error("All Gemini model fallbacks failed.");
-}
+import { orchestrator, cleanAndParseJson } from "../agents";
 
 // ─── COMPLETE CANDIDATE PROFILE DATA ─────────────────────────────────────────
 export interface CandidateProfileData {
@@ -196,19 +154,25 @@ export interface JobAnalysisResult extends JobMatchAnalysis {
   tailoredResume: TailoredResumeResult;
 }
 
-// ─── 1. ANALYZE JOB MATCH (STEP 1 ONLY) ───────────────────────────────────────
+// ─── 1. ANALYZE JOB MATCH (STEP 1 ONLY — POWERED BY AG-003) ───────────────────
 export async function analyzeJobMatchOnly(
   jobDescription: string,
   candidate: CandidateProfileData
 ): Promise<JobMatchAnalysis> {
-  const prompt = `
-You are the CareerForge AI intelligence engine. Analyze this candidate's verified profile against the job description.
+  const result = await orchestrator.executeAgent<
+    { jobDescription: string; candidate: CandidateProfileData },
+    JobMatchAnalysis
+  >(
+    "AG-003",
+    { data: { jobDescription, candidate } },
+    (input) => `
+Analyze this candidate's verified profile against the job description.
 
 === CANDIDATE PROFILE ===
-${JSON.stringify(candidate, null, 2)}
+${JSON.stringify(input.candidate, null, 2)}
 
 === JOB DESCRIPTION ===
-${jobDescription}
+${input.jobDescription}
 
 === RULES & GUARDRAILS ===
 1. Compare technical skills, soft skills, educational level, and years of experience.
@@ -264,43 +228,16 @@ Return JSON conforming EXACTLY to:
     }
   ]
 }
-`;
+`
+  );
 
-  const text = await generateWithFallback(prompt, {
-    responseMimeType: "application/json",
-    temperature: 0.15,
-  });
-  return JSON.parse(text) as JobMatchAnalysis;
-}
-
-function cleanAndParseJson<T>(rawText: string): T {
-  let clean = rawText.trim();
-  if (clean.startsWith("```json")) clean = clean.slice(7);
-  else if (clean.startsWith("```")) clean = clean.slice(3);
-  if (clean.endsWith("```")) clean = clean.slice(0, -3);
-  clean = clean.trim();
-
-  try {
-    return JSON.parse(clean) as T;
-  } catch (initialErr) {
-    // When LLMs output LaTeX source inside JSON, unescaped backslashes (e.g. \d, \i, \s, \c) cause JSON.parse to fail.
-    // Repair odd sequences of backslashes before non-JSON-escape characters:
-    try {
-      const withFixedSlashes = clean.replace(/(\\+)([^"\\\/bfnrtu]|u(?![\da-fA-F]{4})|$)/g, (match, slashes, nextChar) => {
-        if (slashes.length % 2 === 1) {
-          return slashes + "\\" + nextChar;
-        }
-        return match;
-      });
-      return JSON.parse(withFixedSlashes) as T;
-    } catch (secondErr) {
-      console.error("[CareerForge AI] Failed to parse JSON with repaired slashes:", (initialErr as any)?.message);
-      throw secondErr;
-    }
+  if (!result.success || !result.data) {
+    throw new Error(result.error || "AG-003 Skill Matching Agent execution failed.");
   }
+  return result.data;
 }
 
-// ─── 2. GENERATE TAILORED RESUME (STEP 2) ─────────────────────────────────────
+// ─── 2. GENERATE TAILORED RESUME (STEP 2 — POWERED BY AG-004) ─────────────────
 export async function generateTailoredResumeOnly(
   jobDescription: string,
   candidate: CandidateProfileData,
@@ -314,42 +251,61 @@ export async function generateTailoredResumeOnly(
     ? `${candidate.contact.countryCode || "+91"} ${candidate.contact.phone}`
     : "";
 
-  const prompt = `
-You are the CareerForge AI Resume Engineering Engine.
+  const result = await orchestrator.executeAgent<
+    {
+      jobDescription: string;
+      candidate: CandidateProfileData;
+      selectedTemplate: ResumeTemplate;
+      layoutRules: string;
+      phoneStr: string;
+    },
+    TailoredResumeResult
+  >(
+    "AG-004",
+    {
+      data: {
+        jobDescription,
+        candidate,
+        selectedTemplate,
+        layoutRules,
+        phoneStr,
+      },
+    },
+    (input) => `
 Your task is to take this candidate's verified profile and generate a high-impact, ATS-optimized, fully customized resume tailored specifically to the target Job Description, styled using the chosen template.
 
 === CANDIDATE VERIFIED PROFILE DATA ===
-Name: ${candidate.name}
-Headline: ${candidate.headline || ""}
-Target Role: ${candidate.headline || "Software Engineer"}
-Summary: ${candidate.summary || ""}
+Name: ${input.candidate.name}
+Headline: ${input.candidate.headline || ""}
+Target Role: ${input.candidate.headline || "Software Engineer"}
+Summary: ${input.candidate.summary || ""}
 Contact Info:
-  Phone: ${phoneStr}
-  Email: ${candidate.contact.email || ""}
-  Location: ${candidate.contact.location || ""}
-  LinkedIn: ${candidate.contact.linkedinUrl || ""}
-  GitHub: ${candidate.contact.githubUrl || ""}
-  Website/Portfolio: ${candidate.contact.websiteUrl || ""}
-Skills: ${candidate.skills.join(", ")}
-Soft Skills: ${candidate.softSkills.join(", ")}
-Educations: ${JSON.stringify(candidate.educations, null, 2)}
-Experiences: ${JSON.stringify(candidate.experiences, null, 2)}
-Projects: ${JSON.stringify(candidate.projects, null, 2)}
-Certifications: ${JSON.stringify(candidate.certifications, null, 2)}
+  Phone: ${input.phoneStr}
+  Email: ${input.candidate.contact.email || ""}
+  Location: ${input.candidate.contact.location || ""}
+  LinkedIn: ${input.candidate.contact.linkedinUrl || ""}
+  GitHub: ${input.candidate.contact.githubUrl || ""}
+  Website/Portfolio: ${input.candidate.contact.websiteUrl || ""}
+Skills: ${input.candidate.skills.join(", ")}
+Soft Skills: ${input.candidate.softSkills.join(", ")}
+Educations: ${JSON.stringify(input.candidate.educations, null, 2)}
+Experiences: ${JSON.stringify(input.candidate.experiences, null, 2)}
+Projects: ${JSON.stringify(input.candidate.projects, null, 2)}
+Certifications: ${JSON.stringify(input.candidate.certifications, null, 2)}
 
 === TARGET JOB DESCRIPTION ===
-${jobDescription}
+${input.jobDescription}
 
 === SELECTED RESUME TEMPLATE ===
-Template Name: ${selectedTemplate.name}
+Template Name: ${input.selectedTemplate.name}
 Template Rules:
-${layoutRules}
+${input.layoutRules}
 
 === INSTRUCTIONS & CRITICAL GUARDRAILS ===
 1. CANDIDATE IDENTITY INTEGRITY:
-   - "contact.name" MUST be "${candidate.name}". NEVER replace the candidate's name with a job title like "Aspiring Software Engineer".
-   - "contact.phone" MUST be "${phoneStr}".
-   - "contact.email" MUST be "${candidate.contact.email || ""}".
+   - "contact.name" MUST be "${input.candidate.name}". NEVER replace the candidate's name with a job title like "Aspiring Software Engineer".
+   - "contact.phone" MUST be "${input.phoneStr}".
+   - "contact.email" MUST be "${input.candidate.contact.email || ""}".
 
 2. DYNAMIC SECTION PRUNING & ZERO PLACEHOLDER TOLERANCE (CRITICAL):
    - The selected resume template is a VISUAL BLUEPRINT ONLY (for styling, typography, spacing, rules, and colors).
@@ -373,17 +329,17 @@ ${layoutRules}
 
 Return JSON conforming EXACTLY to:
 {
-  "title": "${candidate.name} - ${selectedTemplate.name}",
+  "title": "${input.candidate.name} - ${input.selectedTemplate.name}",
   "targetRole": "string",
   "summary": "string",
   "contact": {
-    "name": "${candidate.name}",
-    "email": "${candidate.contact.email || ""}",
-    "phone": "${phoneStr}",
-    "location": "${candidate.contact.location || ""}",
-    "linkedin": "${candidate.contact.linkedinUrl || ""}",
-    "github": "${candidate.contact.githubUrl || ""}",
-    "website": "${candidate.contact.websiteUrl || ""}"
+    "name": "${input.candidate.name}",
+    "email": "${input.candidate.contact.email || ""}",
+    "phone": "${input.phoneStr}",
+    "location": "${input.candidate.contact.location || ""}",
+    "linkedin": "${input.candidate.contact.linkedinUrl || ""}",
+    "github": "${input.candidate.contact.githubUrl || ""}",
+    "website": "${input.candidate.contact.websiteUrl || ""}"
   },
   "skills": ["string"],
   "educations": [
@@ -421,14 +377,14 @@ Return JSON conforming EXACTLY to:
   ],
   "latexSource": "string"
 }
-`;
+`
+  );
 
-  const text = await generateWithFallback(prompt, {
-    responseMimeType: "application/json",
-    temperature: 0.2,
-  });
+  if (!result.success || !result.data) {
+    throw new Error(result.error || "AG-004 Resume Generation Agent execution failed.");
+  }
 
-  const parsed = cleanAndParseJson<TailoredResumeResult>(text);
+  const parsed = result.data;
 
   // ─── GUARANTEE COMPLETE CANDIDATE PROFILE DATA INTEGRITY ─────────────────
   // 1. Contact Name & Info
@@ -534,7 +490,7 @@ export async function analyzeJobAndGenerateResume(
   };
 }
 
-// ─── 4. ATS RESUME AUDIT & SCORING ENGINE ────────────────────────────────────
+// ─── 4. ATS RESUME AUDIT & SCORING ENGINE (POWERED BY AG-007) ────────────────
 export interface ResumeAtsScoreResult {
   overallScore: number; // 0 - 100
   grade: "A+" | "A" | "B+" | "B" | "Needs Improvement";
@@ -556,24 +512,39 @@ export async function evaluateResumeAtsScore(
   resumeContent: TailoredResumeResult,
   latexSource?: string
 ): Promise<ResumeAtsScoreResult> {
-  const prompt = `
-You are an enterprise Applicant Tracking System (ATS) auditing engine (modeling Workday, Taleo, Greenhouse, and Lever algorithms).
+  const result = await orchestrator.executeAgent<
+    {
+      jobDescription: string;
+      resumeContent: TailoredResumeResult;
+      latexSource?: string;
+    },
+    ResumeAtsScoreResult
+  >(
+    "AG-007",
+    {
+      data: {
+        jobDescription,
+        resumeContent,
+        latexSource,
+      },
+    },
+    (input) => `
 Evaluate this engineered resume strictly against the target Job Description to provide an accurate, realistic ATS score.
 
 === TARGET JOB DESCRIPTION ===
-${jobDescription}
+${input.jobDescription}
 
 === CANDIDATE'S TAILORED RESUME ===
-Target Role: ${resumeContent.targetRole}
-Professional Summary: ${resumeContent.summary}
-Technical Skills: ${(resumeContent.skills || []).join(", ")}
-Education: ${JSON.stringify(resumeContent.educations || [], null, 2)}
-Work Experience: ${JSON.stringify(resumeContent.experiences || [], null, 2)}
-Projects: ${JSON.stringify(resumeContent.projects || [], null, 2)}
-Certifications: ${JSON.stringify(resumeContent.certifications || [], null, 2)}
+Target Role: ${input.resumeContent.targetRole}
+Professional Summary: ${input.resumeContent.summary}
+Technical Skills: ${(input.resumeContent.skills || []).join(", ")}
+Education: ${JSON.stringify(input.resumeContent.educations || [], null, 2)}
+Work Experience: ${JSON.stringify(input.resumeContent.experiences || [], null, 2)}
+Projects: ${JSON.stringify(input.resumeContent.projects || [], null, 2)}
+Certifications: ${JSON.stringify(input.resumeContent.certifications || [], null, 2)}
 
 === LATEX SOURCE SNIPPET ===
-${latexSource ? latexSource.slice(0, 1500) : "LaTeX Document"}
+${input.latexSource ? input.latexSource.slice(0, 1500) : "LaTeX Document"}
 
 === ATS AUDIT RUBRIC ===
 1. OVERALL SCORE (0 to 100):
@@ -610,12 +581,12 @@ Return strictly valid JSON matching:
   "improvements": ["string"],
   "atsAssessmentSummary": "string"
 }
-`;
+`
+  );
 
-  const text = await generateWithFallback(prompt, {
-    responseMimeType: "application/json",
-    temperature: 0.15,
-  });
+  if (!result.success || !result.data) {
+    throw new Error(result.error || "AG-007 Resume Quality Agent execution failed.");
+  }
 
-  return cleanAndParseJson<ResumeAtsScoreResult>(text);
+  return result.data;
 }

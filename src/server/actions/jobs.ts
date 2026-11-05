@@ -3,38 +3,7 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-function getGenAI() {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GEMINI_APIKEY || "";
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY is not configured.");
-  }
-  return new GoogleGenerativeAI(apiKey);
-}
-
-const FALLBACK_MODELS = [
-  "gemini-3.1-flash-lite-preview",
-  "gemini-3.5-flash",
-  "gemini-3.5-flash-lite",
-  "gemini-flash-lite-latest",
-  "gemini-3.8-flash",
-];
-
-async function generateWithFallback(prompt: string, config: any): Promise<string> {
-  const genAI = getGenAI();
-  let lastErr: any = null;
-  for (const model of FALLBACK_MODELS) {
-    try {
-      const m = genAI.getGenerativeModel({ model, generationConfig: config });
-      const res = await m.generateContent(prompt);
-      return res.response.text();
-    } catch (e) {
-      lastErr = e;
-    }
-  }
-  throw lastErr;
-}
+import { orchestrator } from "../agents";
 
 // ─── GET ALL SAVED JOB DESCRIPTIONS FOR CURRENT USER ────────────────────────
 export async function getUserJobs() {
@@ -136,11 +105,17 @@ export async function extractJobIntelligence(rawText: string) {
 
   const userId = session.user.id;
 
-  const prompt = `
-You are a professional job description parser. Extract structured intelligence from the following job description.
+  const result = await orchestrator.executeAgent<string, JDIntelligence>(
+    "AG-002",
+    {
+      userId,
+      data: rawText,
+    },
+    (text) => `
+Extract structured intelligence from the following job description.
 
 === JOB DESCRIPTION ===
-${rawText}
+${text}
 
 Return a JSON object with EXACTLY these fields:
 {
@@ -158,13 +133,14 @@ Return a JSON object with EXACTLY these fields:
   "workType": "Remote | Hybrid | On-site | Not Specified",
   "jobSummary": "string (2-3 sentence summary of the role)"
 }
-`;
+`
+  );
 
-  const text = await generateWithFallback(prompt, {
-    responseMimeType: "application/json",
-    temperature: 0.1,
-  });
-  const intelligence = JSON.parse(text) as JDIntelligence;
+  if (!result.success || !result.data) {
+    return { success: false, error: result.error || "AG-002 Job Analyzer Agent failed." };
+  }
+
+  const intelligence = result.data;
 
   // Save to DB with extracted data
   const savedJob = await db.jobDescription.create({
