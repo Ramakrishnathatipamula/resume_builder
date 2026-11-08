@@ -272,6 +272,9 @@ export async function generateTailoredResumeOnly(
         layoutRules,
         phoneStr,
       },
+      options: {
+        maxRetries: 1,
+      },
     },
     (input) => `
 Your task is to take this candidate's verified profile and generate a high-impact, ATS-optimized, fully customized resume tailored specifically to the target Job Description, styled using the chosen template.

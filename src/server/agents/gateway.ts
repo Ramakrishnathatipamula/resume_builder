@@ -47,11 +47,11 @@ export function cleanAndParseJson<T>(rawText: string): T {
   if (clean.endsWith("```")) clean = clean.slice(0, -3);
   clean = clean.trim();
 
+  // 1. Try direct JSON parse
   try {
     return JSON.parse(clean) as T;
   } catch (initialErr) {
-    // LLMs often output LaTeX backslashes (\d, \i, \s, etc.) inside JSON strings.
-    // Repair odd backslash counts before non-JSON escape characters:
+    // 2. Repair unescaped backslashes commonly produced in LaTeX strings
     try {
       const withFixedSlashes = clean.replace(
         /(\\+)([^"\\\/bfnrtu]|u(?![\da-fA-F]{4})|$)/g,
@@ -64,8 +64,48 @@ export function cleanAndParseJson<T>(rawText: string): T {
       );
       return JSON.parse(withFixedSlashes) as T;
     } catch (secondErr) {
-      console.error("[ModelGateway] JSON parse failure despite escape repair:", (initialErr as any)?.message);
-      throw secondErr;
+      // 3. Repair unescaped literal control characters (newlines/tabs) inside string values
+      try {
+        let inString = false;
+        let escaped = false;
+        let sanitized = "";
+        for (let i = 0; i < clean.length; i++) {
+          const ch = clean[i];
+          if (ch === '"' && !escaped) {
+            inString = !inString;
+            sanitized += ch;
+          } else if (inString) {
+            if (ch === "\n") sanitized += "\\n";
+            else if (ch === "\r") sanitized += "\\r";
+            else if (ch === "\t") sanitized += "\\t";
+            else if (ch === "\\" && !escaped) {
+              escaped = true;
+              sanitized += ch;
+            } else {
+              escaped = false;
+              sanitized += ch;
+            }
+          } else {
+            sanitized += ch;
+          }
+        }
+        const withFixedSlashes2 = sanitized.replace(
+          /(\\+)([^"\\\/bfnrtu]|u(?![\da-fA-F]{4})|$)/g,
+          (match, slashes, nextChar) => {
+            if (slashes.length % 2 === 1) {
+              return slashes + "\\" + nextChar;
+            }
+            return match;
+          }
+        );
+        return JSON.parse(withFixedSlashes2) as T;
+      } catch (thirdErr) {
+        console.error(
+          "[ModelGateway] JSON parse failure despite multiple escape repairs:",
+          (initialErr as any)?.message
+        );
+        throw initialErr;
+      }
     }
   }
 }
@@ -104,7 +144,7 @@ export class ModelGateway {
           model: modelName,
           generationConfig: {
             temperature: options.temperature ?? 0.2,
-            maxOutputTokens: options.maxOutputTokens ?? 4096,
+            maxOutputTokens: options.maxOutputTokens ?? 8192,
             responseMimeType: options.responseMimeType ?? "application/json",
           },
         });

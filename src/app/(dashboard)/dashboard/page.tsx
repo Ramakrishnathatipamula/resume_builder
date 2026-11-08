@@ -186,6 +186,71 @@ export default function DashboardPage() {
     "overview" | "skills" | "education" | "roadmap" | "resume"
   >("overview");
 
+  // Hydrate persisted session state (so JD and analysis persist across navigating sections)
+  useEffect(() => {
+    try {
+      const savedJd = sessionStorage.getItem("careerforge_jd_text");
+      if (savedJd) setJobDescription(savedJd);
+
+      const savedAnalysis = sessionStorage.getItem("careerforge_match_analysis");
+      if (savedAnalysis) {
+        setMatchAnalysis(JSON.parse(savedAnalysis));
+      }
+
+      const savedJobId = sessionStorage.getItem("careerforge_current_job_id");
+      if (savedJobId) setCurrentJobId(savedJobId);
+
+      const savedMatchId = sessionStorage.getItem("careerforge_current_match_id");
+      if (savedMatchId) setCurrentMatchResultId(savedMatchId);
+
+      const savedResume = sessionStorage.getItem("careerforge_tailored_resume");
+      if (savedResume) {
+        setTailoredResume(JSON.parse(savedResume));
+      }
+
+      const savedTab = sessionStorage.getItem("careerforge_active_result_tab");
+      if (savedTab) setActiveResultTab(savedTab as any);
+    } catch (e) {
+      console.warn("Failed to restore session state:", e);
+    }
+  }, []);
+
+  const handleJdChange = (val: string) => {
+    setJobDescription(val);
+    try {
+      if (val) {
+        sessionStorage.setItem("careerforge_jd_text", val);
+      } else {
+        sessionStorage.removeItem("careerforge_jd_text");
+      }
+    } catch (e) {}
+  };
+
+  const handleSelectResultTab = (tab: "overview" | "skills" | "education" | "roadmap" | "resume") => {
+    setActiveResultTab(tab);
+    try {
+      sessionStorage.setItem("careerforge_active_result_tab", tab);
+    } catch (e) {}
+  };
+
+  const handleResetJob = () => {
+    setMatchAnalysis(null);
+    setTailoredResume(null);
+    setJobDescription("");
+    setCurrentJobId(null);
+    setCurrentMatchResultId(null);
+    setAtsScore(null);
+    setError(null);
+    try {
+      sessionStorage.removeItem("careerforge_jd_text");
+      sessionStorage.removeItem("careerforge_match_analysis");
+      sessionStorage.removeItem("careerforge_current_job_id");
+      sessionStorage.removeItem("careerforge_current_match_id");
+      sessionStorage.removeItem("careerforge_tailored_resume");
+      sessionStorage.removeItem("careerforge_active_result_tab");
+    } catch (e) {}
+  };
+
   useEffect(() => {
     const custom = getStoredCustomTemplates();
     setCustomTemplates(custom);
@@ -221,6 +286,14 @@ export default function DashboardPage() {
         setCurrentJobId(res.data.jobId);
         setCurrentMatchResultId(res.data.matchResultId);
         setActiveResultTab("overview");
+        try {
+          sessionStorage.setItem("careerforge_jd_text", jobDescription);
+          sessionStorage.setItem("careerforge_match_analysis", JSON.stringify(res.data.analysis));
+          sessionStorage.setItem("careerforge_current_job_id", res.data.jobId);
+          sessionStorage.setItem("careerforge_current_match_id", res.data.matchResultId);
+          sessionStorage.setItem("careerforge_active_result_tab", "overview");
+          sessionStorage.removeItem("careerforge_tailored_resume");
+        } catch (e) {}
       }
     } catch (err: any) {
       setError(err?.message || "An unexpected error occurred during analysis.");
@@ -255,13 +328,17 @@ export default function DashboardPage() {
       );
 
       if (!res.success || !res.data) {
-        setError(res.error || "Failed to generate tailored resume.");
+        setError(res.error || "Failed to generate tailored resume. Please try again.");
       } else {
         setTailoredResume(res.data.tailoredResume);
         setActiveResultTab("resume");
+        try {
+          sessionStorage.setItem("careerforge_tailored_resume", JSON.stringify(res.data.tailoredResume));
+          sessionStorage.setItem("careerforge_active_result_tab", "resume");
+        } catch (e) {}
       }
     } catch (err: any) {
-      setError(err?.message || "An unexpected error occurred while generating resume.");
+      setError(err?.message || "An unexpected error occurred while generating resume. Please try again.");
     } finally {
       setGeneratingResume(false);
     }
@@ -348,7 +425,7 @@ export default function DashboardPage() {
                 </label>
                 <button
                   type="button"
-                  onClick={() => setJobDescription(SAMPLE_JOB_DESCRIPTION)}
+                  onClick={() => handleJdChange(SAMPLE_JOB_DESCRIPTION)}
                   className="text-xs text-indigo-400 hover:text-indigo-300 font-medium transition cursor-pointer"
                 >
                   Paste Sample JD
@@ -358,14 +435,14 @@ export default function DashboardPage() {
                 required
                 rows={12}
                 value={jobDescription}
-                onChange={(e) => setJobDescription(e.target.value)}
+                onChange={(e) => handleJdChange(e.target.value)}
                 placeholder="Paste the full job description here (responsibilities, required tech stack, qualifications)..."
                 className="w-full p-4 rounded-2xl bg-gray-950/80 border border-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm leading-relaxed transition font-mono"
               />
               <div className="flex justify-between mt-2 px-1 text-xs text-gray-500">
                 <span>{jobDescription.length} characters</span>
                 {jobDescription.length > 0 && (
-                  <button type="button" onClick={() => setJobDescription("")} className="text-gray-400 hover:text-white transition cursor-pointer">
+                  <button type="button" onClick={() => handleJdChange("")} className="text-gray-400 hover:text-white transition cursor-pointer">
                     Clear
                   </button>
                 )}
@@ -422,19 +499,46 @@ export default function DashboardPage() {
               </h1>
             </div>
             <button
-              onClick={() => {
-                setMatchAnalysis(null);
-                setTailoredResume(null);
-                setJobDescription("");
-                setCurrentJobId(null);
-                setCurrentMatchResultId(null);
-              }}
+              onClick={handleResetJob}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-900 hover:bg-gray-800 border border-gray-800 text-sm font-medium text-gray-300 transition shrink-0 cursor-pointer"
             >
               <RotateCcw className="w-4 h-4" />
               <span>Analyze Another Job</span>
             </button>
           </div>
+
+          {/* Error Banner in Analysis/Resume State */}
+          {error && (
+            <div className="p-4 rounded-xl bg-red-950/70 border border-red-800/80 text-red-200 text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
+                <span className="font-medium">{error}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setError(null);
+                  setShowTemplateModal(true);
+                }}
+                className="px-3.5 py-1.5 rounded-lg bg-red-800 hover:bg-red-700 text-xs font-semibold text-white transition shrink-0 cursor-pointer self-start sm:self-auto"
+              >
+                Retry Generation
+              </button>
+            </div>
+          )}
+
+          {/* Active Generation Indicator */}
+          {generatingResume && (
+            <div className="p-4 rounded-xl bg-indigo-950/60 border border-indigo-800/80 text-indigo-200 text-sm flex items-center gap-3 shadow-lg animate-pulse">
+              <Loader2 className="w-5 h-5 text-indigo-400 animate-spin shrink-0" />
+              <div>
+                <p className="font-bold text-white">Engineering your tailored resume...</p>
+                <p className="text-xs text-indigo-300 mt-0.5">
+                  AI is synthesizing your verified credentials with job requirements into LaTeX format. Please keep this tab open (takes ~10-15s).
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* ── RESULT TABS (JOB INTELLIGENCE FIRST) ──────────────────── */}
           <div className="flex gap-1 bg-gray-900/60 border border-gray-800 rounded-xl p-1 overflow-x-auto">
@@ -449,7 +553,7 @@ export default function DashboardPage() {
               return (
                 <button
                   key={tab}
-                  onClick={() => setActiveResultTab(tab as any)}
+                  onClick={() => handleSelectResultTab(tab as any)}
                   className={`px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
                     activeResultTab === tab
                       ? "bg-indigo-600 text-white shadow"
@@ -790,7 +894,7 @@ export default function DashboardPage() {
                 {tailoredResume && (
                   <button
                     type="button"
-                    onClick={() => setActiveResultTab("resume")}
+                    onClick={() => handleSelectResultTab("resume")}
                     className="px-4 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-white font-semibold text-xs flex items-center gap-1.5 transition cursor-pointer"
                   >
                     <FileText className="w-3.5 h-3.5" />
