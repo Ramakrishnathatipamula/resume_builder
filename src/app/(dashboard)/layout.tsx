@@ -84,6 +84,42 @@ export default function DashboardLayout({
     return null;
   }
 
+  // If in onboarding, render clean focused flow without sidebar
+  if (pathname === "/dashboard/onboarding") {
+    return (
+      <div className="min-h-screen bg-[#0b0f19] flex flex-col">
+        <header className="h-16 border-b border-gray-800/80 bg-gray-950/70 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-30">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center font-bold text-white text-base shadow-lg shadow-indigo-600/30">
+              C
+            </div>
+            <div>
+              <span className="font-bold text-white tracking-tight block text-sm">CareerForge</span>
+              <span className="text-[10px] text-gray-400 font-medium block">Account Setup & Career Profile</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <span className="text-xs text-gray-300 hidden sm:inline">
+              Welcome, <strong className="text-white">{session.user.name}</strong>
+            </span>
+            <button
+              onClick={handleSignOut}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-400 hover:text-red-300 hover:bg-red-950/40 border border-red-900/40 transition cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Sign Out</span>
+            </button>
+          </div>
+        </header>
+
+        <main className="flex-1 p-4 md:p-8 max-w-5xl w-full mx-auto">
+          {children}
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex bg-[#0b0f19]">
       {/* Sidebar Navigation */}

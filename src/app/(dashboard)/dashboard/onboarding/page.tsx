@@ -400,7 +400,7 @@ export default function OnboardingPage() {
     setSaving(true);
     try {
       await completeOnboarding();
-      router.push("/dashboard/profile");
+      router.push("/dashboard");
       router.refresh();
     } catch (err: any) {
       setMessage({ type: "error", text: err?.message || "Failed to complete onboarding." });
