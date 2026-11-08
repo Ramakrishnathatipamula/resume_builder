@@ -95,9 +95,10 @@ model Profile {
   githubUrl       String?
   linkedinUrl     String?
   targetRoles     String[]        @default([])
-  completionScore Int             @default(0)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  completionScore    Int             @default(0)
+  onboardingComplete Boolean         @default(false)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
 
   educations      Education[]
   experiences     Experience[]

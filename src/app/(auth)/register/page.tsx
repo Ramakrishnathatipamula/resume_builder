@@ -39,7 +39,7 @@ export default function RegisterPage() {
           "Failed to create account. Please try again.";
         setError(errorMsg);
       } else {
-        router.push("/dashboard");
+        router.push("/dashboard/onboarding");
         router.refresh();
       }
     } catch (err: any) {

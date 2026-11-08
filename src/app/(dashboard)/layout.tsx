@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut, useSession } from "@/lib/auth-client";
 import { getProfileData } from "@/server/actions/profile";
+import { checkOnboardingStatus } from "@/server/actions/profile";
 import {
   User,
   LayoutTemplate,
@@ -37,12 +38,23 @@ export default function DashboardLayout({
       })
       .catch(() => {});
 
+    // Check onboarding status and redirect if needed
+    if (pathname !== "/dashboard/onboarding") {
+      checkOnboardingStatus()
+        .then((status) => {
+          if (status.needsOnboarding) {
+            router.push("/dashboard/onboarding");
+          }
+        })
+        .catch(() => {});
+    }
+
     const onPhotoUpdate = (e: any) => {
       setProfilePhoto(e.detail || null);
     };
     window.addEventListener("profilePhotoUpdated", onPhotoUpdate);
     return () => window.removeEventListener("profilePhotoUpdated", onPhotoUpdate);
-  }, [session?.user]);
+  }, [session?.user, pathname, router]);
 
   const handleSignOut = async () => {
     await signOut();

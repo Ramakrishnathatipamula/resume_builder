@@ -452,6 +452,42 @@ export async function deleteSkill(id: string) {
 }
 
 // ----------------------------------------------------
+// ONBOARDING ACTIONS
+// ----------------------------------------------------
+export async function checkOnboardingStatus() {
+  const headerList = await headers();
+  const session = await auth.api.getSession({ headers: headerList });
+  if (!session?.user) return { needsOnboarding: false };
+
+  const profile = await db.profile.findUnique({
+    where: { userId: session.user.id },
+  });
+
+  if (!profile || !profile.onboardingComplete) {
+    return { needsOnboarding: true };
+  }
+
+  return { needsOnboarding: false };
+}
+
+export async function completeOnboarding() {
+  const headerList = await headers();
+  const session = await auth.api.getSession({ headers: headerList });
+  if (!session?.user) throw new Error("Unauthorized");
+
+  const profile = await db.profile.findUnique({ where: { userId: session.user.id } });
+  if (!profile) throw new Error("Profile not found");
+
+  await db.profile.update({
+    where: { id: profile.id },
+    data: { onboardingComplete: true },
+  });
+
+  revalidatePath("/dashboard/profile");
+  return { success: true };
+}
+
+// ----------------------------------------------------
 // CERTIFICATION ACTIONS
 // ----------------------------------------------------
 export async function addCertification(data: {
